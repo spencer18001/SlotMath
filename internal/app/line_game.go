@@ -6,6 +6,7 @@ import (
 
 	"slotmath/internal/board"
 	"slotmath/internal/evaluator"
+	"slotmath/internal/probe"
 )
 
 // LineGame owns the line-game simulation flow.
@@ -88,4 +89,38 @@ func (g *LineGame) RunSims(spins int, seed int64) (*SimulationSummary, error) {
 	}
 
 	return summary, nil
+}
+
+// RunLinePayRuleProbe estimates the appearance probability of paytable.line[ruleID] on payline 0.
+func (g *LineGame) RunLinePayRuleProbe(spins int, seed int64, ruleID int) (*probe.LinePayRuleResult, error) {
+	actualSeed := seed
+	if actualSeed == 0 {
+		actualSeed = time.Now().UnixNano()
+	}
+
+	rng := rand.New(rand.NewSource(actualSeed))
+	generator, err := board.NewGenerator(g.data.Reels, g.data.Config.NumRows)
+	if err != nil {
+		return nil, err
+	}
+	lineProbe, err := probe.NewLinePayRuleProbe(
+		g.data.Paylines,
+		g.data.Paytable,
+		g.data.Config.WildSymbols,
+		ruleID,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	var hits int64
+	for spin := 0; spin < spins; spin++ {
+		spinResult := generator.Draw(rng)
+		if lineProbe.Observe(spinResult.Board) {
+			hits++
+		}
+	}
+
+	result := lineProbe.Result(spins, hits)
+	return &result, nil
 }
