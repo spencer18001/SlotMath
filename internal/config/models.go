@@ -23,7 +23,8 @@ type Paytable struct {
 
 // PayEntry describes one payout rule, such as K pays 100 for 5 on a line.
 type PayEntry struct {
-	Symbol string `json:"symbol"`
-	Count  int    `json:"count"`
-	Payout int64  `json:"payout"`
+	Symbol              string  `json:"symbol"`
+	Count               int     `json:"count"`
+	Payout              int64   `json:"payout"`
+	ExpectedProbability float64 `json:"expectedProbability"`
 }

@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"math"
 	"os"
 	"strings"
 	"time"
@@ -144,14 +145,31 @@ func printPayHitSummary(summary *app.SimulationSummary) {
 	}
 	fmt.Println("Pay hit summary:")
 	for _, hit := range summary.PayHits {
+		probability := ratio(hit.Hits, int64(summary.Spins))
+		if hit.ExpectedProbability == 0 {
+			fmt.Printf(
+				"  %-7s %-2s x%d pays %-4d hits %-8d probability %.8f expected - error - zScore -\n",
+				hit.Kind,
+				hit.Symbol,
+				hit.Count,
+				hit.Payout,
+				hit.Hits,
+				probability,
+			)
+			continue
+		}
+		zScore, hasZScore := probabilityZScore(probability, hit.ExpectedProbability, summary.Spins)
 		fmt.Printf(
-			"  %-7s %-2s x%d pays %-4d hits %-8d probability %.8f\n",
+			"  %-7s %-2s x%d pays %-4d hits %-8d probability %.8f expected %.8f error % .4f%% zScore %s\n",
 			hit.Kind,
 			hit.Symbol,
 			hit.Count,
 			hit.Payout,
 			hit.Hits,
-			ratio(hit.Hits, int64(summary.Spins)),
+			probability,
+			hit.ExpectedProbability,
+			relativeError(probability, hit.ExpectedProbability)*100,
+			formatZScore(zScore, hasZScore),
 		)
 	}
 }
@@ -168,6 +186,7 @@ func printLinePayRuleProbe(result *probe.LinePayRuleResult, opts options, elapse
 	fmt.Println("Wild: included")
 	fmt.Printf("Hits: %d\n", result.Hits)
 	fmt.Printf("Probability: %.8f\n", result.Probability)
+	printProbeComparison(result.Probability, result.Rule.ExpectedProbability, result.Spins)
 	fmt.Printf("Elapsed: %s\n", elapsed)
 }
 
@@ -181,7 +200,21 @@ func printScatterPayRuleProbe(result *probe.ScatterPayRuleResult, opts options, 
 	fmt.Println("Wild: excluded")
 	fmt.Printf("Hits: %d\n", result.Hits)
 	fmt.Printf("Probability: %.8f\n", result.Probability)
+	printProbeComparison(result.Probability, result.Rule.ExpectedProbability, result.Spins)
 	fmt.Printf("Elapsed: %s\n", elapsed)
+}
+
+func printProbeComparison(actual, expected float64, spins int) {
+	if expected == 0 {
+		fmt.Println("Expected: -")
+		fmt.Println("Error: -")
+		fmt.Println("Z-score: -")
+		return
+	}
+	fmt.Printf("Expected: %.8f\n", expected)
+	fmt.Printf("Error: % .4f%%\n", relativeError(actual, expected)*100)
+	zScore, ok := probabilityZScore(actual, expected, spins)
+	fmt.Printf("Z-score: %s\n", formatZScore(zScore, ok))
 }
 
 func ratio(numerator int64, denominator int64) float64 {
@@ -189,6 +222,31 @@ func ratio(numerator int64, denominator int64) float64 {
 		return 0
 	}
 	return float64(numerator) / float64(denominator)
+}
+
+func relativeError(actual, expected float64) float64 {
+	if expected == 0 {
+		return 0
+	}
+	return (actual - expected) / expected
+}
+
+func probabilityZScore(actual, expected float64, spins int) (float64, bool) {
+	if spins <= 0 || expected <= 0 || expected >= 1 {
+		return 0, false
+	}
+	standardError := math.Sqrt(expected * (1 - expected) / float64(spins))
+	if standardError == 0 {
+		return 0, false
+	}
+	return (actual - expected) / standardError, true
+}
+
+func formatZScore(zScore float64, ok bool) string {
+	if !ok {
+		return "-"
+	}
+	return fmt.Sprintf("% .3f", zScore)
 }
 
 func printSeed(seed int64) {

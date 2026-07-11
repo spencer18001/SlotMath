@@ -16,11 +16,12 @@ type LineGame struct {
 
 // PayHitSummary counts how often one configured pay rule appears during simulation.
 type PayHitSummary struct {
-	Kind   string
-	Symbol string
-	Count  int
-	Payout int64
-	Hits   int64
+	Kind                string
+	Symbol              string
+	Count               int
+	Payout              int64
+	ExpectedProbability float64
+	Hits                int64
 }
 
 type payHitKey struct {
@@ -137,20 +138,22 @@ func (g *LineGame) initialPayHitSummaries() ([]PayHitSummary, map[payHitKey]int)
 		key := payHitKey{kind: "line", symbol: pay.Symbol, count: pay.Count}
 		index[key] = len(summaries)
 		summaries = append(summaries, PayHitSummary{
-			Kind:   key.kind,
-			Symbol: pay.Symbol,
-			Count:  pay.Count,
-			Payout: pay.Payout,
+			Kind:                key.kind,
+			Symbol:              pay.Symbol,
+			Count:               pay.Count,
+			Payout:              pay.Payout,
+			ExpectedProbability: pay.ExpectedProbability,
 		})
 	}
 	for _, pay := range g.data.Paytable.Scatter {
 		key := payHitKey{kind: "scatter", symbol: pay.Symbol, count: pay.Count}
 		index[key] = len(summaries)
 		summaries = append(summaries, PayHitSummary{
-			Kind:   key.kind,
-			Symbol: pay.Symbol,
-			Count:  pay.Count,
-			Payout: pay.Payout,
+			Kind:                key.kind,
+			Symbol:              pay.Symbol,
+			Count:               pay.Count,
+			Payout:              pay.Payout,
+			ExpectedProbability: pay.ExpectedProbability,
 		})
 	}
 

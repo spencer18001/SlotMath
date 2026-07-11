@@ -1,22 +1,22 @@
 {
   "line": [
-    { "symbol": "K", "count": 3, "payout": 5 },
-    { "symbol": "K", "count": 4, "payout": 30 },
-    { "symbol": "K", "count": 5, "payout": 100 },
-    { "symbol": "Q", "count": 3, "payout": 5 },
-    { "symbol": "Q", "count": 4, "payout": 25 },
-    { "symbol": "Q", "count": 5, "payout": 100 },
-    { "symbol": "J", "count": 3, "payout": 5 },
-    { "symbol": "J", "count": 4, "payout": 20 },
-    { "symbol": "J", "count": 5, "payout": 75 },
-    { "symbol": "10", "count": 3, "payout": 5 },
-    { "symbol": "10", "count": 4, "payout": 20 },
-    { "symbol": "10", "count": 5, "payout": 75 },
-    { "symbol": "9", "count": 3, "payout": 5 },
-    { "symbol": "9", "count": 4, "payout": 10 },
-    { "symbol": "9", "count": 5, "payout": 50 }
+    { "symbol": "K", "count": 3, "payout": 5, "expectedProbability": 0.0032 },
+    { "symbol": "K", "count": 4, "payout": 30, "expectedProbability": 0.00064 },
+    { "symbol": "K", "count": 5, "payout": 100, "expectedProbability": 0.00016 },
+    { "symbol": "Q", "count": 3, "payout": 5, "expectedProbability": 0.0048 },
+    { "symbol": "Q", "count": 4, "payout": 25, "expectedProbability": 0.00096 },
+    { "symbol": "Q", "count": 5, "payout": 100, "expectedProbability": 0.00024 },
+    { "symbol": "J", "count": 3, "payout": 5, "expectedProbability": 0.01125 },
+    { "symbol": "J", "count": 4, "payout": 20, "expectedProbability": 0.0028125 },
+    { "symbol": "J", "count": 5, "payout": 75, "expectedProbability": 0.0009375 },
+    { "symbol": "10", "count": 3, "payout": 5, "expectedProbability": 0.009375 },
+    { "symbol": "10", "count": 4, "payout": 20, "expectedProbability": 0.00234375 },
+    { "symbol": "10", "count": 5, "payout": 75, "expectedProbability": 0.00078125 },
+    { "symbol": "9", "count": 3, "payout": 5, "expectedProbability": 0.0140625 },
+    { "symbol": "9", "count": 4, "payout": 10, "expectedProbability": 0.00328125 },
+    { "symbol": "9", "count": 5, "payout": 50, "expectedProbability": 0.00140625 }
   ],
   "scatter": [
-    { "symbol": "S", "count": 3, "payout": 50 }
+    { "symbol": "S", "count": 3, "payout": 50, "expectedProbability": 0.003375 }
   ]
 }

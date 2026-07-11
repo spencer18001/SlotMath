@@ -106,6 +106,9 @@ func validatePayEntries(kind string, entries []config.PayEntry) error {
 		if pay.Payout < 0 {
 			return fmt.Errorf("%s pay %d payout cannot be negative", kind, index)
 		}
+		if pay.ExpectedProbability < 0 {
+			return fmt.Errorf("%s pay %d expectedProbability cannot be negative", kind, index)
+		}
 	}
 	return nil
 }
