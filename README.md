@@ -27,13 +27,13 @@ SlotMath/
 ## Basic usage
 
 ```go
-game, err := spin.Load("games/sample_lines", seed)
+engine, err := spin.Load("games/sample_lines", seed)
 if err != nil {
 	return err
 }
 
-gameFlow := flow.New(game)
-sim := simulator.New(gameFlow)
+slotFlow := flow.New(engine)
+sim := simulator.New(slotFlow)
 summary, err := sim.Run(simulator.Request{Spins: 1_000_000, Bet: 5})
 ```
 
@@ -42,7 +42,7 @@ For one round, callers can drive the flow directly:
 ```go
 state := flow.State{Bet: 5}
 for !state.Completed {
-	step, err := gameFlow.Next(state)
+	step, err := slotFlow.Next(state)
 	if err != nil {
 		return err
 	}

@@ -29,12 +29,12 @@ type loadedGame struct {
 	paytable Paytable
 }
 
-func Load(gamePath string, seed int64) (*Game, error) {
+func Load(gamePath string, seed int64) (*Engine, error) {
 	data, err := loadGame(gamePath)
 	if err != nil {
 		return nil, err
 	}
-	return newGame(data, seed)
+	return newEngine(data, seed)
 }
 
 func loadGame(gamePath string) (loadedGame, error) {

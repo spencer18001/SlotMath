@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-type Game struct {
+type Engine struct {
 	info             Info
 	rng              *rand.Rand
 	generator        *generator
@@ -16,7 +16,7 @@ type Game struct {
 	paytable         Paytable
 }
 
-func newGame(data loadedGame, seed int64) (*Game, error) {
+func newEngine(data loadedGame, seed int64) (*Engine, error) {
 	actualSeed := seed
 	if actualSeed == 0 {
 		actualSeed = time.Now().UnixNano()
@@ -25,7 +25,7 @@ func newGame(data loadedGame, seed int64) (*Game, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Game{
+	return &Engine{
 		info: Info{
 			GameID: data.config.GameID, Path: data.path, Seed: seed,
 			BetPerLine: data.config.BetPerLine, ReelCount: len(data.reels), PaylineCount: len(data.paylines),
@@ -37,7 +37,7 @@ func newGame(data loadedGame, seed int64) (*Game, error) {
 	}, nil
 }
 
-func (g *Game) ResolveBet(totalBet int64) (Bet, error) {
+func (g *Engine) ResolveBet(totalBet int64) (Bet, error) {
 	if totalBet <= 0 {
 		return Bet{}, fmt.Errorf("bet must be greater than zero")
 	}
@@ -51,11 +51,11 @@ func (g *Game) ResolveBet(totalBet int64) (Bet, error) {
 	return Bet{Total: totalBet, PerLine: g.info.BetPerLine, ActiveLines: activeLines}, nil
 }
 
-func (g *Game) DefaultBet() Bet {
+func (g *Engine) DefaultBet() Bet {
 	return Bet{Total: g.info.BetPerLine * int64(g.info.PaylineCount), PerLine: g.info.BetPerLine, ActiveLines: g.info.PaylineCount}
 }
 
-func (g *Game) Spin(request Request) (Result, error) {
+func (g *Engine) Spin(request Request) (Result, error) {
 	bet, err := g.ResolveBet(request.Bet)
 	if err != nil {
 		return Result{}, err
@@ -77,7 +77,7 @@ func (g *Game) Spin(request Request) (Result, error) {
 	}, nil
 }
 
-func (g *Game) SpinLine(lineIndex int) (Result, error) {
+func (g *Engine) SpinLine(lineIndex int) (Result, error) {
 	if lineIndex < 0 || lineIndex >= len(g.paylines) {
 		return Result{}, fmt.Errorf("line index %d is outside 0..%d", lineIndex, len(g.paylines)-1)
 	}
@@ -93,7 +93,7 @@ func (g *Game) SpinLine(lineIndex int) (Result, error) {
 	return result, nil
 }
 
-func (g *Game) SpinScatter() (Result, error) {
+func (g *Engine) SpinScatter() (Result, error) {
 	drawn := g.generator.draw(g.rng)
 	scatterResult, err := g.scatterEvaluator.evaluate(drawn.Board, g.DefaultBet().Total)
 	if err != nil {
@@ -105,9 +105,9 @@ func (g *Game) SpinScatter() (Result, error) {
 	}, nil
 }
 
-func (g *Game) Info() Info         { return g.info }
-func (g *Game) Paytable() Paytable { return clonePaytable(g.paytable) }
-func (g *Game) Payline(index int) ([]int, bool) {
+func (g *Engine) Info() Info         { return g.info }
+func (g *Engine) Paytable() Paytable { return clonePaytable(g.paytable) }
+func (g *Engine) Payline(index int) ([]int, bool) {
 	if index < 0 || index >= len(g.paylines) {
 		return nil, false
 	}

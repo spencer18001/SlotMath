@@ -31,14 +31,14 @@ func main() {
 		os.Exit(1)
 	}
 
-	game, err := spin.Load(opts.GamePath, opts.Seed)
+	engine, err := spin.Load(opts.GamePath, opts.Seed)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "slotmath: load game: %v\n", err)
 		os.Exit(1)
 	}
 
 	if opts.HasLineRuleProbe {
-		result, err := simulator.RunLinePayRuleProbe(game, opts.Spins, opts.ProbeLinePayRuleIndex)
+		result, err := simulator.RunLinePayRuleProbe(engine, opts.Spins, opts.ProbeLinePayRuleIndex)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "slotmath: run probe: %v\n", err)
 			os.Exit(1)
@@ -47,7 +47,7 @@ func main() {
 		return
 	}
 	if opts.HasScatterRuleProbe {
-		result, err := simulator.RunScatterPayRuleProbe(game, opts.Spins, opts.ProbeScatterPayRuleIndex)
+		result, err := simulator.RunScatterPayRuleProbe(engine, opts.Spins, opts.ProbeScatterPayRuleIndex)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "slotmath: run probe: %v\n", err)
 			os.Exit(1)
@@ -58,16 +58,16 @@ func main() {
 
 	bet := opts.Bet
 	if bet == 0 {
-		bet = game.DefaultBet().Total
+		bet = engine.DefaultBet().Total
 	}
-	gameFlow := flow.New(game)
-	sim := simulator.New(gameFlow)
+	slotFlow := flow.New(engine)
+	sim := simulator.New(slotFlow)
 	summary, err := sim.Run(simulator.Request{Spins: opts.Spins, Bet: bet})
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "slotmath: run sims: %v\n", err)
 		os.Exit(1)
 	}
-	printSummary(game, summary, time.Since(startedAt))
+	printSummary(engine, summary, time.Since(startedAt))
 }
 
 func parseFlags() options {
@@ -100,9 +100,9 @@ func validateOptions(opts options) error {
 	return nil
 }
 
-func printSummary(game *spin.Game, summary *simulator.Summary, elapsed time.Duration) {
-	info := game.Info()
-	paytable := game.Paytable()
+func printSummary(engine *spin.Engine, summary *simulator.Summary, elapsed time.Duration) {
+	info := engine.Info()
+	paytable := engine.Paytable()
 	fmt.Println("SlotMath line-game simulator")
 	fmt.Printf("Game ID: %s\n", info.GameID)
 	fmt.Printf("Game path: %s\n", info.Path)

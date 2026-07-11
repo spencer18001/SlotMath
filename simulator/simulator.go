@@ -36,18 +36,18 @@ type Summary struct {
 	Status          string
 }
 
-func New(gameFlow *flow.Flow) *Simulator { return &Simulator{flow: gameFlow} }
+func New(slotFlow *flow.Flow) *Simulator { return &Simulator{flow: slotFlow} }
 
 func (s *Simulator) Run(request Request) (*Summary, error) {
 	if request.Spins <= 0 {
 		return nil, fmt.Errorf("spins must be greater than zero")
 	}
-	game := s.flow.Game()
-	bet, err := game.ResolveBet(request.Bet)
+	engine := s.flow.Engine()
+	bet, err := engine.ResolveBet(request.Bet)
 	if err != nil {
 		return nil, err
 	}
-	paytable := game.Paytable()
+	paytable := engine.Paytable()
 	summary := &Summary{
 		Spins:    request.Spins,
 		Bet:      bet,

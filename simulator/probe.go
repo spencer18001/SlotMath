@@ -26,22 +26,22 @@ type ScatterPayRuleProbeResult struct {
 }
 
 // RunLinePayRuleProbe estimates the appearance probability of paytable.line[payRuleIndex] on payline 0.
-func RunLinePayRuleProbe(game *spin.Game, spins int, payRuleIndex int) (*LinePayRuleProbeResult, error) {
+func RunLinePayRuleProbe(engine *spin.Engine, spins int, payRuleIndex int) (*LinePayRuleProbeResult, error) {
 	if spins <= 0 {
 		return nil, fmt.Errorf("spins must be greater than zero")
 	}
-	paytable := game.Paytable()
+	paytable := engine.Paytable()
 	if payRuleIndex < 0 || payRuleIndex >= len(paytable.Line) {
 		return nil, fmt.Errorf("line pay rule index %d is outside 0..%d", payRuleIndex, len(paytable.Line)-1)
 	}
-	payline, ok := game.Payline(0)
+	payline, ok := engine.Payline(0)
 	if !ok {
 		return nil, fmt.Errorf("payline 0 is required for line pay rule probe")
 	}
 	rule := paytable.Line[payRuleIndex]
 	var hits int64
 	for index := 0; index < spins; index++ {
-		result, err := game.SpinLine(0)
+		result, err := engine.SpinLine(0)
 		if err != nil {
 			return nil, err
 		}
@@ -63,18 +63,18 @@ func RunLinePayRuleProbe(game *spin.Game, spins int, payRuleIndex int) (*LinePay
 }
 
 // RunScatterPayRuleProbe estimates the appearance probability of paytable.scatter[payRuleIndex].
-func RunScatterPayRuleProbe(game *spin.Game, spins int, payRuleIndex int) (*ScatterPayRuleProbeResult, error) {
+func RunScatterPayRuleProbe(engine *spin.Engine, spins int, payRuleIndex int) (*ScatterPayRuleProbeResult, error) {
 	if spins <= 0 {
 		return nil, fmt.Errorf("spins must be greater than zero")
 	}
-	paytable := game.Paytable()
+	paytable := engine.Paytable()
 	if payRuleIndex < 0 || payRuleIndex >= len(paytable.Scatter) {
 		return nil, fmt.Errorf("scatter pay rule index %d is outside 0..%d", payRuleIndex, len(paytable.Scatter)-1)
 	}
 	rule := paytable.Scatter[payRuleIndex]
 	var hits int64
 	for index := 0; index < spins; index++ {
-		result, err := game.SpinScatter()
+		result, err := engine.SpinScatter()
 		if err != nil {
 			return nil, err
 		}

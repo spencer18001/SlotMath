@@ -18,19 +18,19 @@ type Result struct {
 	Spin  spin.Result
 }
 
-type Flow struct{ game *spin.Game }
+type Flow struct{ engine *spin.Engine }
 
-func New(game *spin.Game) *Flow { return &Flow{game: game} }
+func New(engine *spin.Engine) *Flow { return &Flow{engine: engine} }
 
 func (f *Flow) Next(state State) (Result, error) {
 	if state.Completed {
 		return Result{}, ErrRoundCompleted
 	}
-	spinResult, err := f.game.Spin(spin.Request{Bet: state.Bet})
+	spinResult, err := f.engine.Spin(spin.Request{Bet: state.Bet})
 	if err != nil {
 		return Result{}, err
 	}
 	return Result{State: State{Bet: state.Bet, Completed: true}, Spin: spinResult}, nil
 }
 
-func (f *Flow) Game() *spin.Game { return f.game }
+func (f *Flow) Engine() *spin.Engine { return f.engine }
