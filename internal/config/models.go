@@ -15,13 +15,13 @@ type GameConfig struct {
 	ScatterSymbols []string `json:"scatterSymbols"`
 }
 
-// Paytable groups pay rules by evaluator type. The first version only loads
-// line pays, but this shape can later add scatter, ways, and cluster sections.
+// Paytable groups pay rules by evaluator type.
 type Paytable struct {
-	Line []PayEntry `json:"line"`
+	Line    []PayEntry `json:"line"`
+	Scatter []PayEntry `json:"scatter"`
 }
 
-// PayEntry describes one payout rule, such as H1 pays 200 for 5 on a line.
+// PayEntry describes one payout rule, such as K pays 100 for 5 on a line.
 type PayEntry struct {
 	Symbol string `json:"symbol"`
 	Count  int    `json:"count"`

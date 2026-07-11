@@ -86,15 +86,25 @@ func validateGameData(data *GameData) error {
 			}
 		}
 	}
-	for index, pay := range data.Paytable.Line {
+	if err := validatePayEntries("line", data.Paytable.Line); err != nil {
+		return err
+	}
+	if err := validatePayEntries("scatter", data.Paytable.Scatter); err != nil {
+		return err
+	}
+	return nil
+}
+
+func validatePayEntries(kind string, entries []config.PayEntry) error {
+	for index, pay := range entries {
 		if pay.Symbol == "" {
-			return fmt.Errorf("line pay %d symbol is required", index)
+			return fmt.Errorf("%s pay %d symbol is required", kind, index)
 		}
 		if pay.Count <= 0 {
-			return fmt.Errorf("line pay %d count must be greater than zero", index)
+			return fmt.Errorf("%s pay %d count must be greater than zero", kind, index)
 		}
 		if pay.Payout < 0 {
-			return fmt.Errorf("line pay %d payout cannot be negative", index)
+			return fmt.Errorf("%s pay %d payout cannot be negative", kind, index)
 		}
 	}
 	return nil
