@@ -2,7 +2,7 @@
   "gameId": "sample_lines",
   "name": "Sample Lines",
   "type": "lines",
-  "bet": 1,
+  "betPerLine": 1,
   "numReels": 5,
   "numRows": 3,
   "reelsFile": "reels.csv",

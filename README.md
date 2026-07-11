@@ -1,37 +1,75 @@
-﻿# SlotMath
+# SlotMath
 
-A small Go slot math simulator project.
+SlotMath provides three public layers for line and scatter slot math:
 
-Initial goal: simulate a basic line game from reel strips, paylines, and a paytable, then report RTP and related statistics.
+```text
+simulator -> flow -> spin
+```
 
-## Planned Structure
+- `spin`: draws and evaluates one independent line/scatter spin.
+- `flow`: advances a round with `Next`; the current round completes after one spin.
+- `simulator`: runs complete rounds repeatedly and aggregates RTP, pay hits, and probes.
+
+The current scope intentionally includes only line pays and scatter pays. Additional
+round state and rules should be added when a game actually requires them.
+
+## Structure
 
 ```text
 SlotMath/
-├─ go.mod
-├─ README.md
-├─ cmd/
-│  └─ slotmath/
-├─ internal/
-│  ├─ config/
-│  ├─ reels/
-│  ├─ board/
-│  ├─ evaluator/
-│  ├─ simulation/
-│  └─ report/
-├─ games/
-│  └─ sample_lines/
-└─ tests/
+├─ spin/                 # Public single-spin math
+├─ flow/                 # Public round flow
+├─ simulator/            # Public simulation and probe tools
+├─ cmd/slotmath/         # CLI wiring and report output
+└─ games/sample_lines/   # Sample line/scatter definition
 ```
 
-## First Milestone
+## Basic usage
+
+```go
+game, err := spin.Load("games/sample_lines", seed)
+if err != nil {
+	return err
+}
+
+gameFlow := flow.New(game)
+sim := simulator.New(gameFlow)
+summary, err := sim.Run(simulator.Request{Spins: 1_000_000, Bet: 5})
+```
+
+For one round, callers can drive the flow directly:
+
+```go
+state := flow.State{Bet: 5}
+for !state.Completed {
+	step, err := gameFlow.Next(state)
+	if err != nil {
+		return err
+	}
+	state = step.State
+}
+```
+
+The spin game owns its random stream. A seed of `0` selects a random seed; a
+non-zero seed makes a run reproducible. A game instance should not be used
+concurrently.
+The configured `betPerLine` is the betting unit. A total bet activates the
+first `bet / betPerLine` paylines. Line wins pay `odds * betPerLine`, while
+scatter wins pay `odds * totalBet`.
+
+The simulator's line pay hit summary records payline 0 only, so its probability
+and z-score remain directly comparable with each rule's single-line
+`expectedProbability`.
+
+## CLI
 
 ```text
-reels.csv + paylines + paytable
--> draw natural boards
--> evaluate line wins
--> simulate N spins
--> report RTP / hit rate / max win / volatility
+go run ./cmd/slotmath -game games/sample_lines -spins 100000 -seed 1 -bet 5
 ```
 
-No implementation yet. This repository is currently only the project skeleton.
+Rule probes remain available:
+
+```text
+go run ./cmd/slotmath -game games/sample_lines -spins 100000 -seed 1 -probe-line-pay-rule 0
+go run ./cmd/slotmath -game games/sample_lines -spins 100000 -seed 1 -probe-scatter-pay-rule 0
+```
