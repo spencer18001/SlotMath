@@ -1,0 +1,46 @@
+# Go build outputs
+/bin/
+/dist/
+/build/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Go workspace and vendored dependencies
+go.work
+go.work.sum
+/vendor/
+
+# Coverage and profiling
+coverage.out
+coverage.html
+*.cover
+*.prof
+*.pprof
+cpu.out
+mem.out
+
+# SlotMath generated outputs
+/output/
+/outputs/
+/reports/
+/results/
+/tmp/
+*.log
+*.csv.tmp
+
+# Editor and OS local files
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Environment files
+.env
+.env.*

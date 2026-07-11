@@ -1,0 +1,19 @@
+{
+  "line": [
+    { "symbol": "K", "count": 3, "payout": 5 },
+    { "symbol": "K", "count": 4, "payout": 30 },
+    { "symbol": "K", "count": 5, "payout": 100 },
+    { "symbol": "Q", "count": 3, "payout": 5 },
+    { "symbol": "Q", "count": 4, "payout": 25 },
+    { "symbol": "Q", "count": 5, "payout": 100 },
+    { "symbol": "J", "count": 3, "payout": 5 },
+    { "symbol": "J", "count": 4, "payout": 20 },
+    { "symbol": "J", "count": 5, "payout": 75 },
+    { "symbol": "10", "count": 3, "payout": 5 },
+    { "symbol": "10", "count": 4, "payout": 20 },
+    { "symbol": "10", "count": 5, "payout": 75 },
+    { "symbol": "9", "count": 3, "payout": 5 },
+    { "symbol": "9", "count": 4, "payout": 10 },
+    { "symbol": "9", "count": 5, "payout": 50 }
+  ]
+}
