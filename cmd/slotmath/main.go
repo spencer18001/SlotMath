@@ -109,6 +109,7 @@ func printSummary(engine *spin.Engine, summary *simulator.Summary, opts options,
 	fmt.Printf("Game ID: %s\n", info.GameID)
 	fmt.Printf("Game path: %s\n", info.Path)
 	fmt.Printf("Base spins: %d\n", summary.Spins)
+	fmt.Printf("Free spins: %d\n", summary.FreeSpins)
 	printSeed(info.Seed)
 	fmt.Printf("Reels: %d\n", info.ReelCount)
 	fmt.Printf("Paylines: %d\n", info.PaylineCount)
