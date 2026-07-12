@@ -38,9 +38,14 @@ func loadReelsCSV(path string) ([][]string, error) {
 		for reelIndex, value := range record {
 			symbol := strings.TrimSpace(value)
 			if symbol == "" {
-				return nil, fmt.Errorf("reels csv %s row %d reel %d is empty", path, rowIndex+1, reelIndex)
+				continue
 			}
 			reels[reelIndex] = append(reels[reelIndex], symbol)
+		}
+	}
+	for reelIndex, reel := range reels {
+		if len(reel) == 0 {
+			return nil, fmt.Errorf("reels csv %s reel %d is empty", path, reelIndex)
 		}
 	}
 

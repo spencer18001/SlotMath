@@ -1,0 +1,16 @@
+{
+  "gameId": "fg",
+  "name": "Free Game Sample",
+  "type": "lines",
+  "betPerLine": 1,
+  "numReels": 5,
+  "numRows": 3,
+  "reels": {
+    "base": "reels_base.csv",
+    "free": "reels_free.csv"
+  },
+  "paylinesFile": "paylines.json",
+  "paytableFile": "paytable.json",
+  "wildSymbols": ["W"],
+  "scatterSymbols": ["S"]
+}

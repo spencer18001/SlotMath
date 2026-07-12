@@ -72,7 +72,7 @@ func main() {
 
 func parseFlags() options {
 	var opts options
-	flag.StringVar(&opts.GamePath, "game", "games/sample_lines", "path to a game definition folder")
+	flag.StringVar(&opts.GamePath, "game", "games/line", "path to a game definition folder")
 	flag.IntVar(&opts.Spins, "spins", 100000, "number of spins to simulate")
 	flag.Int64Var(&opts.Seed, "seed", 0, "base random seed; 0 means random")
 	flag.Int64Var(&opts.Bet, "bet", 0, "total bet per spin; 0 activates all configured paylines")
@@ -107,6 +107,8 @@ func printSummary(engine *spin.Engine, summary *simulator.Summary, elapsed time.
 	fmt.Printf("Game ID: %s\n", info.GameID)
 	fmt.Printf("Game path: %s\n", info.Path)
 	fmt.Printf("Spins: %d\n", summary.Spins)
+	fmt.Printf("Generated spins: %d\n", summary.GeneratedSpins)
+	fmt.Printf("Free spins: %d\n", summary.FreeSpins)
 	printSeed(info.Seed)
 	fmt.Printf("Reels: %d\n", info.ReelCount)
 	fmt.Printf("Paylines: %d\n", info.PaylineCount)
@@ -116,14 +118,19 @@ func printSummary(engine *spin.Engine, summary *simulator.Summary, elapsed time.
 	fmt.Printf("Active lines: %d\n", summary.Bet.ActiveLines)
 	fmt.Printf("Bet per spin: %d\n", summary.Bet.Total)
 	fmt.Printf("Total bet: %d\n", summary.TotalBet)
-	fmt.Printf("Total line win: %d\n", summary.TotalLineWin)
-	fmt.Printf("Total scatter win: %d\n", summary.TotalScatterWin)
-	fmt.Printf("Total win: %d\n", summary.TotalWin)
-	fmt.Printf("Line RTP: %.8f%%\n", ratio(summary.TotalLineWin, summary.TotalBet)*100)
-	fmt.Printf("Scatter RTP: %.8f%%\n", ratio(summary.TotalScatterWin, summary.TotalBet)*100)
+	for _, modeSummary := range summary.Modes {
+		printModeWinSummary(modeSummary, summary.Bet.Total, summary.TotalBet)
+	}
+	fmt.Printf("Overall line win: %d\n", summary.TotalLineWin)
+	fmt.Printf("Overall scatter win: %d\n", summary.TotalScatterWin)
+	fmt.Printf("Overall win: %d\n", summary.TotalWin)
+	fmt.Printf("Overall line RTP: %.8f%%\n", ratio(summary.TotalLineWin, summary.TotalBet)*100)
+	fmt.Printf("Overall scatter RTP: %.8f%%\n", ratio(summary.TotalScatterWin, summary.TotalBet)*100)
 	fmt.Printf("Total RTP: %.8f%%\n", ratio(summary.TotalWin, summary.TotalBet)*100)
 	fmt.Printf("Hit count: %d\n", summary.HitCount)
-	printPayHitSummary(summary)
+	for _, modeSummary := range summary.Modes {
+		printPayHitSummary(modeSummary)
+	}
 	if summary.First != nil {
 		fmt.Printf("First stops: %v\n", summary.First.Stops)
 		fmt.Println("First board:")
@@ -138,6 +145,7 @@ func printSummary(engine *spin.Engine, summary *simulator.Summary, elapsed time.
 			fmt.Println()
 		}
 		fmt.Printf("First win: %d\n", summary.First.TotalWin)
+		fmt.Printf("First free spins awarded: %d\n", summary.First.FreeSpins)
 		if len(summary.First.ScatterWins) > 0 {
 			fmt.Println("First scatter wins:")
 			for _, win := range summary.First.ScatterWins {
@@ -157,11 +165,24 @@ func printSummary(engine *spin.Engine, summary *simulator.Summary, elapsed time.
 	fmt.Printf("Elapsed: %s\n", elapsed)
 }
 
-func printPayHitSummary(summary *simulator.Summary) {
-	if len(summary.PayHits) == 0 {
+func printModeWinSummary(summary simulator.ModeSummary, betPerSpin int64, totalBet int64) {
+	modeBet := int64(summary.Spins) * betPerSpin
+	fmt.Printf("%s spins: %d\n", summary.Mode, summary.Spins)
+	fmt.Printf("%s spin bet basis: %d\n", summary.Mode, modeBet)
+	fmt.Printf("%s line win: %d\n", summary.Mode, summary.TotalLineWin)
+	fmt.Printf("%s scatter win: %d\n", summary.Mode, summary.TotalScatterWin)
+	fmt.Printf("%s total win: %d\n", summary.Mode, summary.TotalWin)
+	fmt.Printf("%s line RTP: %.8f%%\n", summary.Mode, ratio(summary.TotalLineWin, modeBet)*100)
+	fmt.Printf("%s scatter RTP: %.8f%%\n", summary.Mode, ratio(summary.TotalScatterWin, modeBet)*100)
+	fmt.Printf("%s RTP: %.8f%%\n", summary.Mode, ratio(summary.TotalWin, modeBet)*100)
+	fmt.Printf("%s RTP contribution: %.8f%%\n", summary.Mode, ratio(summary.TotalWin, totalBet)*100)
+}
+
+func printPayHitSummary(summary simulator.ModeSummary) {
+	if len(summary.PayHits) == 0 || summary.Spins == 0 {
 		return
 	}
-	fmt.Println("Pay hit summary (line pays use payline 0):")
+	fmt.Printf("%s pay hit summary (line pays use payline 0):\n", summary.Mode)
 	for _, hit := range summary.PayHits {
 		probability := ratio(hit.Hits, int64(summary.Spins))
 		if hit.ExpectedProbability == 0 {

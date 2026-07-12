@@ -9,7 +9,7 @@ import (
 type Engine struct {
 	info             Info
 	rng              *rand.Rand
-	generator        *generator
+	generators       map[Mode]*generator
 	lineEvaluator    *lineEvaluator
 	scatterEvaluator *scatterEvaluator
 	paylines         [][]int
@@ -21,16 +21,21 @@ func newEngine(data loadedGame, seed int64) (*Engine, error) {
 	if actualSeed == 0 {
 		actualSeed = time.Now().UnixNano()
 	}
-	generator, err := newGenerator(data.reels, data.config.NumRows)
-	if err != nil {
-		return nil, err
+	generators := make(map[Mode]*generator, len(data.reels))
+	for mode, reels := range data.reels {
+		generator, err := newGenerator(reels, data.config.NumRows)
+		if err != nil {
+			return nil, fmt.Errorf("create %s generator: %w", mode, err)
+		}
+		generators[mode] = generator
 	}
+	baseReels := data.reels[ModeBase]
 	return &Engine{
 		info: Info{
 			GameID: data.config.GameID, Path: data.path, Seed: seed,
-			BetPerLine: data.config.BetPerLine, ReelCount: len(data.reels), PaylineCount: len(data.paylines),
+			BetPerLine: data.config.BetPerLine, ReelCount: len(baseReels), PaylineCount: len(data.paylines),
 		},
-		rng: rand.New(rand.NewSource(actualSeed)), generator: generator,
+		rng: rand.New(rand.NewSource(actualSeed)), generators: generators,
 		lineEvaluator:    newLineEvaluator(data.paylines, data.paytable, data.config.WildSymbols),
 		scatterEvaluator: newScatterEvaluator(data.config.ScatterSymbols, data.paytable),
 		paylines:         clonePaylines(data.paylines), paytable: clonePaytable(data.paytable),
@@ -60,7 +65,11 @@ func (g *Engine) Spin(request Request) (Result, error) {
 	if err != nil {
 		return Result{}, err
 	}
-	drawn := g.generator.draw(g.rng)
+	mode, generator, err := g.generatorFor(request.Mode)
+	if err != nil {
+		return Result{}, err
+	}
+	drawn := generator.draw(g.rng)
 	lineResult, err := g.lineEvaluator.evaluate(drawn.Board, bet.ActiveLines, bet.PerLine)
 	if err != nil {
 		return Result{}, err
@@ -70,19 +79,25 @@ func (g *Engine) Spin(request Request) (Result, error) {
 		return Result{}, err
 	}
 	return Result{
+		Mode:  mode,
 		Stops: drawn.Stops, Board: drawn.Board,
 		LineWins: lineResult.wins, ScatterWins: scatterResult.wins,
 		TotalLineWin: lineResult.totalWin, TotalScatterWin: scatterResult.totalWin,
-		TotalWin: lineResult.totalWin + scatterResult.totalWin,
+		TotalWin:  lineResult.totalWin + scatterResult.totalWin,
+		FreeSpins: scatterResult.freeSpins,
 	}, nil
 }
 
-func (g *Engine) SpinLine(lineIndex int) (Result, error) {
+func (g *Engine) SpinLine(lineIndex int, modes ...Mode) (Result, error) {
 	if lineIndex < 0 || lineIndex >= len(g.paylines) {
 		return Result{}, fmt.Errorf("line index %d is outside 0..%d", lineIndex, len(g.paylines)-1)
 	}
-	drawn := g.generator.draw(g.rng)
-	result := Result{Stops: drawn.Stops, Board: drawn.Board}
+	mode, generator, err := g.generatorFor(firstMode(modes))
+	if err != nil {
+		return Result{}, err
+	}
+	drawn := generator.draw(g.rng)
+	result := Result{Mode: mode, Stops: drawn.Stops, Board: drawn.Board}
 	win, ok := g.lineEvaluator.evaluateLine(lineIndex, g.paylines[lineIndex], drawn.Board, g.info.BetPerLine)
 	if !ok {
 		return result, nil
@@ -93,20 +108,50 @@ func (g *Engine) SpinLine(lineIndex int) (Result, error) {
 	return result, nil
 }
 
-func (g *Engine) SpinScatter() (Result, error) {
-	drawn := g.generator.draw(g.rng)
+func (g *Engine) SpinScatter(modes ...Mode) (Result, error) {
+	mode, generator, err := g.generatorFor(firstMode(modes))
+	if err != nil {
+		return Result{}, err
+	}
+	drawn := generator.draw(g.rng)
 	scatterResult, err := g.scatterEvaluator.evaluate(drawn.Board, g.DefaultBet().Total)
 	if err != nil {
 		return Result{}, err
 	}
 	return Result{
-		Stops: drawn.Stops, Board: drawn.Board, ScatterWins: scatterResult.wins,
+		Mode: mode, Stops: drawn.Stops, Board: drawn.Board, ScatterWins: scatterResult.wins,
 		TotalScatterWin: scatterResult.totalWin, TotalWin: scatterResult.totalWin,
+		FreeSpins: scatterResult.freeSpins,
 	}, nil
+}
+
+func (g *Engine) generatorFor(mode Mode) (Mode, *generator, error) {
+	if mode == "" {
+		mode = ModeBase
+	}
+	generator, ok := g.generators[mode]
+	if !ok {
+		return "", nil, fmt.Errorf("reels for mode %q are not configured", mode)
+	}
+	return mode, generator, nil
+}
+
+func firstMode(modes []Mode) Mode {
+	if len(modes) == 0 {
+		return ModeBase
+	}
+	return modes[0]
 }
 
 func (g *Engine) Info() Info         { return g.info }
 func (g *Engine) Paytable() Paytable { return clonePaytable(g.paytable) }
+func (g *Engine) Modes() []Mode {
+	modes := []Mode{ModeBase}
+	if _, ok := g.generators[ModeFree]; ok {
+		modes = append(modes, ModeFree)
+	}
+	return modes
+}
 func (g *Engine) Payline(index int) ([]int, bool) {
 	if index < 0 || index >= len(g.paylines) {
 		return nil, false
@@ -115,7 +160,19 @@ func (g *Engine) Payline(index int) ([]int, bool) {
 }
 
 func clonePaytable(value Paytable) Paytable {
-	return Paytable{Line: append([]PayEntry(nil), value.Line...), Scatter: append([]PayEntry(nil), value.Scatter...)}
+	cloneEntries := func(entries []PayEntry) []PayEntry {
+		result := append([]PayEntry(nil), entries...)
+		for index := range result {
+			if entries[index].ExpectedProbabilities != nil {
+				result[index].ExpectedProbabilities = make(map[Mode]float64, len(entries[index].ExpectedProbabilities))
+				for mode, expected := range entries[index].ExpectedProbabilities {
+					result[index].ExpectedProbabilities[mode] = expected
+				}
+			}
+		}
+		return result
+	}
+	return Paytable{Line: cloneEntries(value.Line), Scatter: cloneEntries(value.Scatter)}
 }
 func clonePaylines(values [][]int) [][]int {
 	result := make([][]int, len(values))

@@ -3,8 +3,9 @@ package spin
 import "fmt"
 
 type scatterResult struct {
-	wins     []ScatterWin
-	totalWin int64
+	wins      []ScatterWin
+	totalWin  int64
+	freeSpins int
 }
 
 type scatterEvaluator struct {
@@ -19,7 +20,7 @@ func newScatterEvaluator(scatterSymbols []string, paytable Paytable) *scatterEva
 	}
 	scatterPays := make(map[payKey]payRule)
 	for index, pay := range paytable.Scatter {
-		scatterPays[payKey{symbol: pay.Symbol, count: pay.Count}] = payRule{index: index, odds: pay.Odds}
+		scatterPays[payKey{symbol: pay.Symbol, count: pay.Count}] = payRule{index: index, odds: pay.Odds, freeSpins: pay.FreeSpins}
 	}
 	return &scatterEvaluator{paytable: scatterPays, symbols: symbols}
 }
@@ -39,12 +40,13 @@ func (e *scatterEvaluator) evaluate(b Board, totalBet int64) (scatterResult, err
 	var result scatterResult
 	for symbol, count := range counts {
 		rule, ok := e.paytable[payKey{symbol: symbol, count: count}]
-		if !ok || rule.odds <= 0 {
+		if !ok || (rule.odds <= 0 && rule.freeSpins <= 0) {
 			continue
 		}
 		win := ScatterWin{PayRuleIndex: rule.index, Payout: rule.odds * totalBet}
 		result.wins = append(result.wins, win)
 		result.totalWin += win.Payout
+		result.freeSpins += rule.freeSpins
 	}
 	return result, nil
 }

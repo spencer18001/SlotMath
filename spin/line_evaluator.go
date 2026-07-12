@@ -7,8 +7,9 @@ type payKey struct {
 	count  int
 }
 type payRule struct {
-	index int
-	odds  int64
+	index     int
+	odds      int64
+	freeSpins int
 }
 type lineMatch struct {
 	baseSymbol       string

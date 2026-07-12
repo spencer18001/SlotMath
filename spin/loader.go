@@ -8,23 +8,24 @@ import (
 )
 
 type gameConfig struct {
-	GameID         string   `json:"gameId"`
-	Name           string   `json:"name"`
-	Type           string   `json:"type"`
-	BetPerLine     int64    `json:"betPerLine"`
-	NumReels       int      `json:"numReels"`
-	NumRows        int      `json:"numRows"`
-	ReelsFile      string   `json:"reelsFile"`
-	PaylinesFile   string   `json:"paylinesFile"`
-	PaytableFile   string   `json:"paytableFile"`
-	WildSymbols    []string `json:"wildSymbols"`
-	ScatterSymbols []string `json:"scatterSymbols"`
+	GameID         string          `json:"gameId"`
+	Name           string          `json:"name"`
+	Type           string          `json:"type"`
+	BetPerLine     int64           `json:"betPerLine"`
+	NumReels       int             `json:"numReels"`
+	NumRows        int             `json:"numRows"`
+	ReelsFile      string          `json:"reelsFile"`
+	Reels          map[Mode]string `json:"reels"`
+	PaylinesFile   string          `json:"paylinesFile"`
+	PaytableFile   string          `json:"paytableFile"`
+	WildSymbols    []string        `json:"wildSymbols"`
+	ScatterSymbols []string        `json:"scatterSymbols"`
 }
 
 type loadedGame struct {
 	path     string
 	config   gameConfig
-	reels    [][]string
+	reels    map[Mode][][]string
 	paylines [][]int
 	paytable Paytable
 }
@@ -53,11 +54,19 @@ func loadGame(gamePath string) (loadedGame, error) {
 	if err := loadJSON(filepath.Join(gamePath, cfg.PaylinesFile), &paylines); err != nil {
 		return loadedGame{}, err
 	}
-	reelSet, err := loadReelsCSV(filepath.Join(gamePath, cfg.ReelsFile))
-	if err != nil {
-		return loadedGame{}, err
+	reelFiles := cfg.Reels
+	if len(reelFiles) == 0 && cfg.ReelsFile != "" {
+		reelFiles = map[Mode]string{ModeBase: cfg.ReelsFile}
 	}
-	data := loadedGame{path: gamePath, config: cfg, reels: reelSet, paylines: paylines, paytable: paytable}
+	reelSets := make(map[Mode][][]string, len(reelFiles))
+	for mode, file := range reelFiles {
+		reelSet, err := loadReelsCSV(filepath.Join(gamePath, file))
+		if err != nil {
+			return loadedGame{}, fmt.Errorf("load %s reels: %w", mode, err)
+		}
+		reelSets[mode] = reelSet
+	}
+	data := loadedGame{path: gamePath, config: cfg, reels: reelSets, paylines: paylines, paytable: paytable}
 	if err := validateGame(data); err != nil {
 		return loadedGame{}, err
 	}
@@ -89,12 +98,23 @@ func validateGame(data loadedGame) error {
 	if cfg.NumRows <= 0 {
 		return fmt.Errorf("numRows must be greater than zero")
 	}
-	if len(data.reels) != cfg.NumReels {
-		return fmt.Errorf("reels count %d does not match numReels %d", len(data.reels), cfg.NumReels)
+	if len(data.reels) == 0 {
+		return fmt.Errorf("config reels or reelsFile is required")
 	}
-	for reelIndex, reel := range data.reels {
-		if len(reel) < cfg.NumRows {
-			return fmt.Errorf("reel %d has %d stops, needs at least numRows %d", reelIndex, len(reel), cfg.NumRows)
+	if _, ok := data.reels[ModeBase]; !ok {
+		return fmt.Errorf("base reels are required")
+	}
+	for mode, reelSet := range data.reels {
+		if mode != ModeBase && mode != ModeFree {
+			return fmt.Errorf("unsupported reel mode %q", mode)
+		}
+		if len(reelSet) != cfg.NumReels {
+			return fmt.Errorf("%s reels count %d does not match numReels %d", mode, len(reelSet), cfg.NumReels)
+		}
+		for reelIndex, reel := range reelSet {
+			if len(reel) < cfg.NumRows {
+				return fmt.Errorf("%s reel %d has %d stops, needs at least numRows %d", mode, reelIndex, len(reel), cfg.NumRows)
+			}
 		}
 	}
 	for lineIndex, line := range data.paylines {
@@ -110,7 +130,23 @@ func validateGame(data loadedGame) error {
 	if err := validatePayEntries("line", data.paytable.Line); err != nil {
 		return err
 	}
-	return validatePayEntries("scatter", data.paytable.Scatter)
+	for index, pay := range data.paytable.Line {
+		if pay.FreeSpins != 0 {
+			return fmt.Errorf("line pay %d cannot award freeSpins", index)
+		}
+	}
+	if err := validatePayEntries("scatter", data.paytable.Scatter); err != nil {
+		return err
+	}
+	for _, pay := range data.paytable.Scatter {
+		if pay.FreeSpins > 0 {
+			if _, ok := data.reels[ModeFree]; !ok {
+				return fmt.Errorf("free reels are required when scatter pays award freeSpins")
+			}
+			break
+		}
+	}
+	return nil
 }
 
 func validatePayEntries(kind string, entries []PayEntry) error {
@@ -126,6 +162,17 @@ func validatePayEntries(kind string, entries []PayEntry) error {
 		}
 		if pay.ExpectedProbability < 0 {
 			return fmt.Errorf("%s pay %d expectedProbability cannot be negative", kind, index)
+		}
+		for mode, expected := range pay.ExpectedProbabilities {
+			if mode != ModeBase && mode != ModeFree {
+				return fmt.Errorf("%s pay %d has unsupported expected probability mode %q", kind, index, mode)
+			}
+			if expected < 0 {
+				return fmt.Errorf("%s pay %d %s expected probability cannot be negative", kind, index, mode)
+			}
+		}
+		if pay.FreeSpins < 0 {
+			return fmt.Errorf("%s pay %d freeSpins cannot be negative", kind, index)
 		}
 	}
 	return nil

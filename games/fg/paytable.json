@@ -1,0 +1,24 @@
+{
+  "line": [
+    { "symbol": "K", "count": 3, "odds": 5, "expectedProbabilities": { "base": 0.0016, "free": 0.00234375 } },
+    { "symbol": "K", "count": 4, "odds": 30, "expectedProbabilities": { "base": 0.00032, "free": 0.0005756578947368421 } },
+    { "symbol": "K", "count": 5, "odds": 100, "expectedProbabilities": { "base": 0.00008, "free": 0.0002055921052631579 } },
+    { "symbol": "Q", "count": 3, "odds": 5, "expectedProbabilities": { "base": 0.0048, "free": 0.0048 } },
+    { "symbol": "Q", "count": 4, "odds": 25, "expectedProbabilities": { "base": 0.00096, "free": 0.0009473684210526316 } },
+    { "symbol": "Q", "count": 5, "odds": 100, "expectedProbabilities": { "base": 0.00024, "free": 0.0002526315789473684 } },
+    { "symbol": "J", "count": 3, "odds": 5, "expectedProbabilities": { "base": 0.01125, "free": 0.0147 } },
+    { "symbol": "J", "count": 4, "odds": 20, "expectedProbabilities": { "base": 0.0028125, "free": 0.004310526315789474 } },
+    { "symbol": "J", "count": 5, "odds": 75, "expectedProbabilities": { "base": 0.0009375, "free": 0.0019894736842105264 } },
+    { "symbol": "10", "count": 3, "odds": 5, "expectedProbabilities": { "base": 0.009375, "free": 0.013125 } },
+    { "symbol": "10", "count": 4, "odds": 20, "expectedProbabilities": { "base": 0.00234375, "free": 0.003848684210526316 } },
+    { "symbol": "10", "count": 5, "odds": 75, "expectedProbabilities": { "base": 0.00078125, "free": 0.0017763157894736843 } },
+    { "symbol": "9", "count": 3, "odds": 5, "expectedProbabilities": { "base": 0.0140625, "free": 0.0189 } },
+    { "symbol": "9", "count": 4, "odds": 10, "expectedProbabilities": { "base": 0.003515625, "free": 0.005968421052631579 } },
+    { "symbol": "9", "count": 5, "odds": 50, "expectedProbabilities": { "base": 0.001171875, "free": 0.002131578947368421 } }
+  ],
+  "scatter": [
+    { "symbol": "S", "count": 3, "odds": 2, "freeSpins": 10, "expectedProbabilities": { "base": 0.024384375, "free": 0.025063815789473684 } },
+    { "symbol": "S", "count": 4, "odds": 2, "freeSpins": 15, "expectedProbabilities": { "base": 0.0021515625, "free": 0.002238157894736842 } },
+    { "symbol": "S", "count": 5, "odds": 2, "freeSpins": 20, "expectedProbabilities": { "base": 0.0000759375, "free": 0.00007993421052631578 } }
+  ]
+}

@@ -1,6 +1,16 @@
 package spin
 
-type Request struct{ Bet int64 }
+type Mode string
+
+const (
+	ModeBase Mode = "base"
+	ModeFree Mode = "free"
+)
+
+type Request struct {
+	Bet  int64
+	Mode Mode
+}
 
 type Bet struct {
 	Total       int64
@@ -37,6 +47,7 @@ type ScatterWin struct {
 }
 
 type Result struct {
+	Mode            Mode
 	Stops           []int
 	Board           Board
 	LineWins        []LineWin
@@ -44,13 +55,26 @@ type Result struct {
 	TotalLineWin    int64
 	TotalScatterWin int64
 	TotalWin        int64
+	FreeSpins       int
 }
 
 type PayEntry struct {
-	Symbol              string  `json:"symbol"`
-	Count               int     `json:"count"`
-	Odds                int64   `json:"odds"`
-	ExpectedProbability float64 `json:"expectedProbability"`
+	Symbol                string           `json:"symbol"`
+	Count                 int              `json:"count"`
+	Odds                  int64            `json:"odds"`
+	ExpectedProbability   float64          `json:"expectedProbability,omitempty"`
+	ExpectedProbabilities map[Mode]float64 `json:"expectedProbabilities,omitempty"`
+	FreeSpins             int              `json:"freeSpins,omitempty"`
+}
+
+func (p PayEntry) ExpectedProbabilityFor(mode Mode) float64 {
+	if expected, ok := p.ExpectedProbabilities[mode]; ok {
+		return expected
+	}
+	if mode == ModeBase {
+		return p.ExpectedProbability
+	}
+	return 0
 }
 
 type Paytable struct {
