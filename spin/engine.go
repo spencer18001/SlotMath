@@ -107,45 +107,7 @@ func (g *Engine) Spin(request Request) (Result, error) {
 	}, nil
 }
 
-func (g *Engine) SpinLine(lineIndex int, modes ...Mode) (Result, error) {
-	if lineIndex < 0 || lineIndex >= len(g.paylines) {
-		return Result{}, fmt.Errorf("line index %d is outside 0..%d", lineIndex, len(g.paylines)-1)
-	}
-	mode, generator, err := g.generatorFor(firstMode(modes))
-	if err != nil {
-		return Result{}, err
-	}
-	drawn := generator.draw(g.rng)
-	result := Result{Mode: mode, Stops: drawn.Stops, Board: drawn.Board}
-	win, ok := g.lineEvaluator.evaluateLine(lineIndex, g.paylines[lineIndex], drawn.Board, g.info.BetPerLine)
-	if !ok {
-		return result, nil
-	}
-	result.LineWins = []LineWin{win}
-	result.TotalWin = win.Payout
-	return result, nil
-}
 
-func (g *Engine) SpinScatter(modes ...Mode) (Result, error) {
-	mode, generator, err := g.generatorFor(firstMode(modes))
-	if err != nil {
-		return Result{}, err
-	}
-	drawn := generator.draw(g.rng)
-	scatterResult, err := g.scatterEvaluator.evaluate(drawn.Board, g.DefaultBet().Total)
-	if err != nil {
-		return Result{}, err
-	}
-	var totalWin int64
-	for _, win := range scatterResult.wins {
-		totalWin += win.Payout
-	}
-	return Result{
-		Mode: mode, Stops: drawn.Stops, Board: drawn.Board, ScatterWins: scatterResult.wins,
-		TotalWin:  totalWin,
-		FreeSpins: scatterResult.freeSpins,
-	}, nil
-}
 
 func (g *Engine) generatorFor(mode Mode) (Mode, *generator, error) {
 	if mode == "" {
@@ -158,12 +120,6 @@ func (g *Engine) generatorFor(mode Mode) (Mode, *generator, error) {
 	return mode, generator, nil
 }
 
-func firstMode(modes []Mode) Mode {
-	if len(modes) == 0 {
-		return ModeBase
-	}
-	return modes[0]
-}
 
 func (g *Engine) Info() Info         { return g.info }
 func (g *Engine) Paytable() Paytable { return g.paytable }

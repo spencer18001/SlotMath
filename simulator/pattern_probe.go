@@ -129,13 +129,10 @@ func RunPatternProbe(engine *spin.Engine, spins int, mode spin.Mode, lineIndex i
 	} else if lineIndex != 0 {
 		return nil, fmt.Errorf("line index only applies to line patterns")
 	}
+	bet := engine.DefaultBet().Total
+	req := spin.Request{Bet: bet, Mode: mode}
 	for index := 0; index < spins; index++ {
-		var spinResult spin.Result
-		if pattern.Kind == PatternLine {
-			spinResult, err = engine.SpinLine(lineIndex, mode)
-		} else {
-			spinResult, err = engine.SpinScatter(mode)
-		}
+		spinResult, err := engine.Spin(req)
 		if err != nil {
 			return nil, err
 		}
@@ -143,7 +140,9 @@ func RunPatternProbe(engine *spin.Engine, spins int, mode spin.Mode, lineIndex i
 			result.Hits++
 		}
 	}
-	result.Probability = probability(result.Hits, result.Spins)
+	if result.Spins > 0 {
+		result.Probability = float64(result.Hits) / float64(result.Spins)
+	}
 	return result, nil
 }
 

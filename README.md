@@ -136,19 +136,32 @@ Run complete paid rounds, including all triggered free games:
 go run ./cmd/slotmath -game fg -spins 1000000 -seed 1 -bet 5
 ```
 
-Run focused base-mode probability probes:
+`-game` is the folder name under `games/`, so use `-game fg` rather than `-game games/fg`.
+
+Useful flags:
 
 ```text
-go run ./cmd/slotmath -game fg -spins 1000000 -seed 1 -probe-line-pay-rule 0
-go run ./cmd/slotmath -game fg -spins 1000000 -seed 1 -probe-scatter-pay-rule 0
+-spins     number of paid base spins or pattern-probe spins
+-seed      base random seed; 0 means random
+-bet       total bet per spin; 0 activates all configured paylines
+-v         show detailed pay-hit summaries
 ```
 
-Run raw board-pattern probes. Quote patterns because PowerShell treats `|` as a pipeline:
+Run raw board-pattern probes. Pattern probes draw boards directly in one reel mode and do not run the free-spin flow. Quote patterns because PowerShell treats `|` as a pipeline:
 
 ```text
 go run ./cmd/slotmath -game fg -spins 10000000 -pattern "line.WK|WK|WK|WK|!WK" -expected 0.00032
 go run ./cmd/slotmath -game fg -spins 10000000 -pattern "scatter.S|S|S|!S|!S" -expected 0.002438438
 go run ./cmd/slotmath -game line -spins 10000000 -pattern "scatter.-|S|S|S|-" -expected 0.003375
+```
+
+Pattern-probe flags:
+
+```text
+-pattern   pattern to test, prefixed by line. or scatter.
+-mode      reel mode: base or free
+-line      payline index for line patterns
+-expected  expected probability; 0 disables z-score comparison
 ```
 
 For line patterns, each condition checks the selected payline (`-line 0` by default). For scatter patterns, each condition checks the complete visible reel window. `-` accepts anything, a concatenated token such as `WK` accepts either configured symbol, and `!WK` excludes both.
