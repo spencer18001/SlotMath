@@ -14,6 +14,7 @@ type Engine struct {
 	scatterEvaluator *scatterEvaluator
 	paylines         [][]int
 	paytable         Paytable
+	symbols          []string
 }
 
 func newEngine(data loadedGame, seed int64) (*Engine, error) {
@@ -30,6 +31,18 @@ func newEngine(data loadedGame, seed int64) (*Engine, error) {
 		generators[mode] = generator
 	}
 	baseReels := data.reels[ModeBase]
+	symbolSet := make(map[string]bool)
+	for _, reelSet := range data.reels {
+		for _, reel := range reelSet {
+			for _, symbol := range reel {
+				symbolSet[symbol] = true
+			}
+		}
+	}
+	symbols := make([]string, 0, len(symbolSet))
+	for symbol := range symbolSet {
+		symbols = append(symbols, symbol)
+	}
 	return &Engine{
 		info: Info{
 			GameID: data.config.GameID, Path: data.path, Seed: seed,
@@ -38,7 +51,7 @@ func newEngine(data loadedGame, seed int64) (*Engine, error) {
 		rng: rand.New(rand.NewSource(actualSeed)), generators: generators,
 		lineEvaluator:    newLineEvaluator(data.paylines, data.paytable, data.config.WildSymbols),
 		scatterEvaluator: newScatterEvaluator(data.config.ScatterSymbols, data.paytable),
-		paylines:         data.paylines, paytable: data.paytable,
+		paylines:         data.paylines, paytable: data.paytable, symbols: symbols,
 	}, nil
 }
 
@@ -154,6 +167,7 @@ func firstMode(modes []Mode) Mode {
 
 func (g *Engine) Info() Info         { return g.info }
 func (g *Engine) Paytable() Paytable { return g.paytable }
+func (g *Engine) Symbols() []string  { return append([]string(nil), g.symbols...) }
 func (g *Engine) Modes() []Mode {
 	modes := []Mode{ModeBase}
 	if _, ok := g.generators[ModeFree]; ok {

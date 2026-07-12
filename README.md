@@ -142,3 +142,13 @@ Run focused base-mode probability probes:
 go run ./cmd/slotmath -game fg -spins 1000000 -seed 1 -probe-line-pay-rule 0
 go run ./cmd/slotmath -game fg -spins 1000000 -seed 1 -probe-scatter-pay-rule 0
 ```
+
+Run raw board-pattern probes. Quote patterns because PowerShell treats `|` as a pipeline:
+
+```text
+go run ./cmd/slotmath -game fg -spins 10000000 -pattern "line.WK|WK|WK|WK|!WK" -expected 0.00032
+go run ./cmd/slotmath -game fg -spins 10000000 -pattern "scatter.S|S|S|!S|!S" -expected 0.002438438
+go run ./cmd/slotmath -game line -spins 10000000 -pattern "scatter.-|S|S|S|-" -expected 0.003375
+```
+
+For line patterns, each condition checks the selected payline (`-line 0` by default). For scatter patterns, each condition checks the complete visible reel window. `-` accepts anything, a concatenated token such as `WK` accepts either configured symbol, and `!WK` excludes both.

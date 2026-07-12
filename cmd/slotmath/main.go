@@ -22,6 +22,10 @@ type options struct {
 	ProbeScatterPayRuleIndex int
 	HasLineRuleProbe         bool
 	HasScatterRuleProbe      bool
+	Pattern                  string
+	Mode                     string
+	LineIndex                int
+	Expected                 float64
 	Verbose                  bool
 }
 
@@ -37,6 +41,15 @@ func main() {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "slotmath: load game: %v\n", err)
 		os.Exit(1)
+	}
+	if opts.Pattern != "" {
+		result, err := simulator.RunPatternProbe(engine, opts.Spins, spin.Mode(opts.Mode), opts.LineIndex, opts.Pattern)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "slotmath: run pattern probe: %v\n", err)
+			os.Exit(1)
+		}
+		printPatternProbe(result, opts, time.Since(startedAt))
+		return
 	}
 
 	if opts.HasLineRuleProbe {
@@ -80,6 +93,10 @@ func parseFlags() options {
 	flag.Int64Var(&opts.Bet, "bet", 0, "total bet per spin; 0 activates all configured paylines")
 	flag.IntVar(&opts.ProbeLinePayRuleIndex, "probe-line-pay-rule", -1, "paytable.line rule index to probe on payline 0; -1 disables probe")
 	flag.IntVar(&opts.ProbeScatterPayRuleIndex, "probe-scatter-pay-rule", -1, "paytable.scatter rule index to probe; -1 disables probe")
+	flag.StringVar(&opts.Pattern, "pattern", "", `board pattern, for example "line.WK|WK|WK|WK|!WK"`)
+	flag.StringVar(&opts.Mode, "mode", string(spin.ModeBase), "reel mode for pattern probe: base or free")
+	flag.IntVar(&opts.LineIndex, "line", 0, "payline index for a line pattern")
+	flag.Float64Var(&opts.Expected, "expected", 0, "expected pattern probability; 0 disables z-score comparison")
 	flag.BoolVar(&opts.Verbose, "v", false, "show detailed verbose pay hit summaries")
 	flag.Parse()
 	opts.HasLineRuleProbe = opts.ProbeLinePayRuleIndex >= 0
@@ -97,10 +114,47 @@ func validateOptions(opts options) error {
 	if opts.Bet < 0 {
 		return fmt.Errorf("bet cannot be negative")
 	}
-	if opts.HasLineRuleProbe && opts.HasScatterRuleProbe {
-		return fmt.Errorf("choose either --probe-line-pay-rule or --probe-scatter-pay-rule, not both")
+	probeCount := 0
+	if opts.Pattern != "" {
+		probeCount++
+	}
+	if opts.HasLineRuleProbe {
+		probeCount++
+	}
+	if opts.HasScatterRuleProbe {
+		probeCount++
+	}
+	if probeCount > 1 {
+		return fmt.Errorf("choose only one pattern or pay-rule probe")
+	}
+	if opts.Mode != string(spin.ModeBase) && opts.Mode != string(spin.ModeFree) {
+		return fmt.Errorf("mode must be base or free")
+	}
+	if opts.LineIndex < 0 {
+		return fmt.Errorf("line index cannot be negative")
+	}
+	if opts.Expected < 0 || opts.Expected >= 1 {
+		return fmt.Errorf("expected probability must be in [0, 1)")
 	}
 	return nil
+}
+
+func printPatternProbe(result *simulator.PatternProbeResult, opts options, elapsed time.Duration) {
+	fmt.Println("SlotMath pattern probe")
+	fmt.Printf("Game: %s\n", opts.GamePath)
+	fmt.Printf("Mode: %s\n", result.Mode)
+	fmt.Printf("Type: %s\n", result.Pattern.Kind)
+	if result.Pattern.Kind == simulator.PatternLine {
+		fmt.Printf("Payline index: %d\n", result.LineIndex)
+		fmt.Printf("Payline: %v\n", result.Payline)
+	}
+	fmt.Printf("Pattern: %s\n", result.Pattern.Raw)
+	fmt.Printf("Spins: %d\n", result.Spins)
+	printSeed(opts.Seed)
+	fmt.Printf("Hits: %d\n", result.Hits)
+	fmt.Printf("Probability: %.8f\n", result.Probability)
+	printProbeComparison(result.Probability, opts.Expected, result.Spins)
+	fmt.Printf("Elapsed: %s\n", elapsed)
 }
 
 func printSummary(engine *spin.Engine, summary *simulator.Summary, opts options, elapsed time.Duration) {
