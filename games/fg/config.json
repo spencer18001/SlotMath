@@ -1,11 +1,10 @@
 {
   "gameId": "fg",
-  "name": "Free Game Sample",
-  "type": "lines",
+  "description": "Free Game Sample",
   "betPerLine": 1,
   "numReels": 5,
   "numRows": 3,
-  "reels": {
+  "reelFiles": {
     "base": "reels_base.csv",
     "free": "reels_free.csv"
   },

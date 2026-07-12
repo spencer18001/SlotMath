@@ -4,7 +4,6 @@ import "fmt"
 
 type scatterResult struct {
 	wins      []ScatterWin
-	totalWin  int64
 	freeSpins int
 }
 
@@ -45,7 +44,6 @@ func (e *scatterEvaluator) evaluate(b Board, totalBet int64) (scatterResult, err
 		}
 		win := ScatterWin{PayRuleIndex: rule.index, Payout: rule.odds * totalBet}
 		result.wins = append(result.wins, win)
-		result.totalWin += win.Payout
 		result.freeSpins += rule.freeSpins
 	}
 	return result, nil

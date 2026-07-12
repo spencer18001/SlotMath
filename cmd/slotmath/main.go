@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"path/filepath"
 	"time"
 
 	"slotmath/flow"
@@ -21,6 +22,7 @@ type options struct {
 	ProbeScatterPayRuleIndex int
 	HasLineRuleProbe         bool
 	HasScatterRuleProbe      bool
+	Verbose                  bool
 }
 
 func main() {
@@ -31,7 +33,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	engine, err := spin.Load(opts.GamePath, opts.Seed)
+	engine, err := spin.Load(filepath.Join("games", opts.GamePath), opts.Seed)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "slotmath: load game: %v\n", err)
 		os.Exit(1)
@@ -67,17 +69,18 @@ func main() {
 		fmt.Fprintf(os.Stderr, "slotmath: run sims: %v\n", err)
 		os.Exit(1)
 	}
-	printSummary(engine, summary, time.Since(startedAt))
+	printSummary(engine, summary, opts, time.Since(startedAt))
 }
 
 func parseFlags() options {
 	var opts options
-	flag.StringVar(&opts.GamePath, "game", "games/line", "path to a game definition folder")
+	flag.StringVar(&opts.GamePath, "game", "line", "path to a game definition folder")
 	flag.IntVar(&opts.Spins, "spins", 100000, "number of spins to simulate")
 	flag.Int64Var(&opts.Seed, "seed", 0, "base random seed; 0 means random")
 	flag.Int64Var(&opts.Bet, "bet", 0, "total bet per spin; 0 activates all configured paylines")
 	flag.IntVar(&opts.ProbeLinePayRuleIndex, "probe-line-pay-rule", -1, "paytable.line rule index to probe on payline 0; -1 disables probe")
 	flag.IntVar(&opts.ProbeScatterPayRuleIndex, "probe-scatter-pay-rule", -1, "paytable.scatter rule index to probe; -1 disables probe")
+	flag.BoolVar(&opts.Verbose, "v", false, "show detailed verbose pay hit summaries")
 	flag.Parse()
 	opts.HasLineRuleProbe = opts.ProbeLinePayRuleIndex >= 0
 	opts.HasScatterRuleProbe = opts.ProbeScatterPayRuleIndex >= 0
@@ -100,15 +103,12 @@ func validateOptions(opts options) error {
 	return nil
 }
 
-func printSummary(engine *spin.Engine, summary *simulator.Summary, elapsed time.Duration) {
+func printSummary(engine *spin.Engine, summary *simulator.Summary, opts options, elapsed time.Duration) {
 	info := engine.Info()
 	paytable := engine.Paytable()
-	fmt.Println("SlotMath line-game simulator")
 	fmt.Printf("Game ID: %s\n", info.GameID)
 	fmt.Printf("Game path: %s\n", info.Path)
-	fmt.Printf("Spins: %d\n", summary.Spins)
-	fmt.Printf("Generated spins: %d\n", summary.GeneratedSpins)
-	fmt.Printf("Free spins: %d\n", summary.FreeSpins)
+	fmt.Printf("Base spins: %d\n", summary.Spins)
 	printSeed(info.Seed)
 	fmt.Printf("Reels: %d\n", info.ReelCount)
 	fmt.Printf("Paylines: %d\n", info.PaylineCount)
@@ -121,15 +121,14 @@ func printSummary(engine *spin.Engine, summary *simulator.Summary, elapsed time.
 	for _, modeSummary := range summary.Modes {
 		printModeWinSummary(modeSummary, summary.Bet.Total, summary.TotalBet)
 	}
-	fmt.Printf("Overall line win: %d\n", summary.TotalLineWin)
-	fmt.Printf("Overall scatter win: %d\n", summary.TotalScatterWin)
-	fmt.Printf("Overall win: %d\n", summary.TotalWin)
-	fmt.Printf("Overall line RTP: %.8f%%\n", ratio(summary.TotalLineWin, summary.TotalBet)*100)
-	fmt.Printf("Overall scatter RTP: %.8f%%\n", ratio(summary.TotalScatterWin, summary.TotalBet)*100)
-	fmt.Printf("Total RTP: %.8f%%\n", ratio(summary.TotalWin, summary.TotalBet)*100)
+	fmt.Printf("Overall line RTP: %.2f%%\n", ratio(summary.TotalLineWin, summary.TotalBet)*100)
+	fmt.Printf("Overall scatter RTP: %.2f%%\n", ratio(summary.TotalScatterWin, summary.TotalBet)*100)
+	fmt.Printf("Total RTP: %.2f%%\n", ratio(summary.TotalWin, summary.TotalBet)*100)
 	fmt.Printf("Hit count: %d\n", summary.HitCount)
-	for _, modeSummary := range summary.Modes {
-		printPayHitSummary(modeSummary)
+	if opts.Verbose {
+		for _, modeSummary := range summary.Modes {
+			printPayHitSummary(modeSummary)
+		}
 	}
 	if summary.First != nil {
 		fmt.Printf("First stops: %v\n", summary.First.Stops)
@@ -161,21 +160,17 @@ func printSummary(engine *spin.Engine, summary *simulator.Summary, elapsed time.
 			}
 		}
 	}
-	fmt.Printf("Status: %s\n", summary.Status)
 	fmt.Printf("Elapsed: %s\n", elapsed)
 }
 
 func printModeWinSummary(summary simulator.ModeSummary, betPerSpin int64, totalBet int64) {
 	modeBet := int64(summary.Spins) * betPerSpin
-	fmt.Printf("%s spins: %d\n", summary.Mode, summary.Spins)
-	fmt.Printf("%s spin bet basis: %d\n", summary.Mode, modeBet)
-	fmt.Printf("%s line win: %d\n", summary.Mode, summary.TotalLineWin)
-	fmt.Printf("%s scatter win: %d\n", summary.Mode, summary.TotalScatterWin)
-	fmt.Printf("%s total win: %d\n", summary.Mode, summary.TotalWin)
-	fmt.Printf("%s line RTP: %.8f%%\n", summary.Mode, ratio(summary.TotalLineWin, modeBet)*100)
-	fmt.Printf("%s scatter RTP: %.8f%%\n", summary.Mode, ratio(summary.TotalScatterWin, modeBet)*100)
-	fmt.Printf("%s RTP: %.8f%%\n", summary.Mode, ratio(summary.TotalWin, modeBet)*100)
-	fmt.Printf("%s RTP contribution: %.8f%%\n", summary.Mode, ratio(summary.TotalWin, totalBet)*100)
+	fmt.Printf("%s line RTP: %.2f%%\n", summary.Mode, ratio(summary.TotalLineWin, modeBet)*100)
+	fmt.Printf("%s scatter RTP: %.2f%%\n", summary.Mode, ratio(summary.TotalScatterWin, modeBet)*100)
+	fmt.Printf("%s RTP: %.2f%%\n", summary.Mode, ratio(summary.TotalWin, modeBet)*100)
+	if summary.Mode != spin.ModeBase {
+		fmt.Printf("%s RTP contribution: %.2f%%\n", summary.Mode, ratio(summary.TotalWin, totalBet)*100)
+	}
 }
 
 func printPayHitSummary(summary simulator.ModeSummary) {
@@ -213,7 +208,7 @@ func printLinePayRuleProbe(result *simulator.LinePayRuleProbeResult, opts option
 	fmt.Println("Wild: included")
 	fmt.Printf("Hits: %d\n", result.Hits)
 	fmt.Printf("Probability: %.8f\n", result.Probability)
-	printProbeComparison(result.Probability, result.Rule.ExpectedProbability, result.Spins)
+	printProbeComparison(result.Probability, result.Rule.ExpectedProbabilityFor(spin.ModeBase), result.Spins)
 	fmt.Printf("Elapsed: %s\n", elapsed)
 }
 
@@ -227,7 +222,7 @@ func printScatterPayRuleProbe(result *simulator.ScatterPayRuleProbeResult, opts 
 	fmt.Println("Wild: excluded")
 	fmt.Printf("Hits: %d\n", result.Hits)
 	fmt.Printf("Probability: %.8f\n", result.Probability)
-	printProbeComparison(result.Probability, result.Rule.ExpectedProbability, result.Spins)
+	printProbeComparison(result.Probability, result.Rule.ExpectedProbabilityFor(spin.ModeBase), result.Spins)
 	fmt.Printf("Elapsed: %s\n", elapsed)
 }
 

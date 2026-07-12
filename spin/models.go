@@ -18,7 +18,7 @@ type Bet struct {
 	ActiveLines int
 }
 
-type Board [][]string
+type Board [][]string // [reel][row] -> symbol
 
 func (b Board) Rows() [][]string {
 	if len(b) == 0 {
@@ -47,22 +47,19 @@ type ScatterWin struct {
 }
 
 type Result struct {
-	Mode            Mode
-	Stops           []int
-	Board           Board
-	LineWins        []LineWin
-	ScatterWins     []ScatterWin
-	TotalLineWin    int64
-	TotalScatterWin int64
-	TotalWin        int64
-	FreeSpins       int
+	Mode        Mode
+	Stops       []int
+	Board       Board
+	LineWins    []LineWin
+	ScatterWins []ScatterWin
+	TotalWin    int64
+	FreeSpins   int
 }
 
 type PayEntry struct {
 	Symbol                string           `json:"symbol"`
 	Count                 int              `json:"count"`
 	Odds                  int64            `json:"odds"`
-	ExpectedProbability   float64          `json:"expectedProbability,omitempty"`
 	ExpectedProbabilities map[Mode]float64 `json:"expectedProbabilities,omitempty"`
 	FreeSpins             int              `json:"freeSpins,omitempty"`
 }
@@ -70,9 +67,6 @@ type PayEntry struct {
 func (p PayEntry) ExpectedProbabilityFor(mode Mode) float64 {
 	if expected, ok := p.ExpectedProbabilities[mode]; ok {
 		return expected
-	}
-	if mode == ModeBase {
-		return p.ExpectedProbability
 	}
 	return 0
 }

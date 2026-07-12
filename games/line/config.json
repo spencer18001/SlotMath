@@ -1,11 +1,12 @@
 {
-  "gameId": "sample_lines",
-  "name": "Sample Lines",
-  "type": "lines",
+  "gameId": "line",
+  "description": "Sample Lines",
   "betPerLine": 1,
   "numReels": 5,
   "numRows": 3,
-  "reelsFile": "reels.csv",
+  "reelFiles": {
+    "base": "reels.csv"
+  },
   "paylinesFile": "paylines.json",
   "paytableFile": "paytable.json",
   "wildSymbols": ["W"],

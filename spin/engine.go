@@ -38,7 +38,7 @@ func newEngine(data loadedGame, seed int64) (*Engine, error) {
 		rng: rand.New(rand.NewSource(actualSeed)), generators: generators,
 		lineEvaluator:    newLineEvaluator(data.paylines, data.paytable, data.config.WildSymbols),
 		scatterEvaluator: newScatterEvaluator(data.config.ScatterSymbols, data.paytable),
-		paylines:         clonePaylines(data.paylines), paytable: clonePaytable(data.paytable),
+		paylines:         data.paylines, paytable: data.paytable,
 	}, nil
 }
 
@@ -78,12 +78,18 @@ func (g *Engine) Spin(request Request) (Result, error) {
 	if err != nil {
 		return Result{}, err
 	}
+	var totalWin int64
+	for _, win := range lineResult.wins {
+		totalWin += win.Payout
+	}
+	for _, win := range scatterResult.wins {
+		totalWin += win.Payout
+	}
 	return Result{
 		Mode:  mode,
 		Stops: drawn.Stops, Board: drawn.Board,
 		LineWins: lineResult.wins, ScatterWins: scatterResult.wins,
-		TotalLineWin: lineResult.totalWin, TotalScatterWin: scatterResult.totalWin,
-		TotalWin:  lineResult.totalWin + scatterResult.totalWin,
+		TotalWin:  totalWin,
 		FreeSpins: scatterResult.freeSpins,
 	}, nil
 }
@@ -103,7 +109,6 @@ func (g *Engine) SpinLine(lineIndex int, modes ...Mode) (Result, error) {
 		return result, nil
 	}
 	result.LineWins = []LineWin{win}
-	result.TotalLineWin = win.Payout
 	result.TotalWin = win.Payout
 	return result, nil
 }
@@ -118,9 +123,13 @@ func (g *Engine) SpinScatter(modes ...Mode) (Result, error) {
 	if err != nil {
 		return Result{}, err
 	}
+	var totalWin int64
+	for _, win := range scatterResult.wins {
+		totalWin += win.Payout
+	}
 	return Result{
 		Mode: mode, Stops: drawn.Stops, Board: drawn.Board, ScatterWins: scatterResult.wins,
-		TotalScatterWin: scatterResult.totalWin, TotalWin: scatterResult.totalWin,
+		TotalWin:  totalWin,
 		FreeSpins: scatterResult.freeSpins,
 	}, nil
 }
@@ -144,7 +153,7 @@ func firstMode(modes []Mode) Mode {
 }
 
 func (g *Engine) Info() Info         { return g.info }
-func (g *Engine) Paytable() Paytable { return clonePaytable(g.paytable) }
+func (g *Engine) Paytable() Paytable { return g.paytable }
 func (g *Engine) Modes() []Mode {
 	modes := []Mode{ModeBase}
 	if _, ok := g.generators[ModeFree]; ok {
@@ -156,29 +165,5 @@ func (g *Engine) Payline(index int) ([]int, bool) {
 	if index < 0 || index >= len(g.paylines) {
 		return nil, false
 	}
-	return cloneInts(g.paylines[index]), true
+	return g.paylines[index], true
 }
-
-func clonePaytable(value Paytable) Paytable {
-	cloneEntries := func(entries []PayEntry) []PayEntry {
-		result := append([]PayEntry(nil), entries...)
-		for index := range result {
-			if entries[index].ExpectedProbabilities != nil {
-				result[index].ExpectedProbabilities = make(map[Mode]float64, len(entries[index].ExpectedProbabilities))
-				for mode, expected := range entries[index].ExpectedProbabilities {
-					result[index].ExpectedProbabilities[mode] = expected
-				}
-			}
-		}
-		return result
-	}
-	return Paytable{Line: cloneEntries(value.Line), Scatter: cloneEntries(value.Scatter)}
-}
-func clonePaylines(values [][]int) [][]int {
-	result := make([][]int, len(values))
-	for index, value := range values {
-		result[index] = cloneInts(value)
-	}
-	return result
-}
-func cloneInts(values []int) []int { return append([]int(nil), values...) }

@@ -17,8 +17,7 @@ type lineMatch struct {
 	leadingWildCount int
 }
 type lineResult struct {
-	wins     []LineWin
-	totalWin int64
+	wins []LineWin
 }
 
 type lineEvaluator struct {
@@ -58,7 +57,6 @@ func (e *lineEvaluator) evaluate(b Board, activeLines int, betPerLine int64) (li
 			continue
 		}
 		result.wins = append(result.wins, win)
-		result.totalWin += win.Payout
 	}
 	return result, nil
 }

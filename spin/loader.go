@@ -9,13 +9,11 @@ import (
 
 type gameConfig struct {
 	GameID         string          `json:"gameId"`
-	Name           string          `json:"name"`
-	Type           string          `json:"type"`
+	Description    string          `json:"description"`
 	BetPerLine     int64           `json:"betPerLine"`
 	NumReels       int             `json:"numReels"`
 	NumRows        int             `json:"numRows"`
-	ReelsFile      string          `json:"reelsFile"`
-	Reels          map[Mode]string `json:"reels"`
+	ReelFiles      map[Mode]string `json:"reelFiles"`
 	PaylinesFile   string          `json:"paylinesFile"`
 	PaytableFile   string          `json:"paytableFile"`
 	WildSymbols    []string        `json:"wildSymbols"`
@@ -25,8 +23,8 @@ type gameConfig struct {
 type loadedGame struct {
 	path     string
 	config   gameConfig
-	reels    map[Mode][][]string
-	paylines [][]int
+	reels    map[Mode][][]string // [mode][reel][stop] -> symbol
+	paylines [][]int             // [line][reel] -> row index
 	paytable Paytable
 }
 
@@ -54,10 +52,7 @@ func loadGame(gamePath string) (loadedGame, error) {
 	if err := loadJSON(filepath.Join(gamePath, cfg.PaylinesFile), &paylines); err != nil {
 		return loadedGame{}, err
 	}
-	reelFiles := cfg.Reels
-	if len(reelFiles) == 0 && cfg.ReelsFile != "" {
-		reelFiles = map[Mode]string{ModeBase: cfg.ReelsFile}
-	}
+	reelFiles := cfg.ReelFiles
 	reelSets := make(map[Mode][][]string, len(reelFiles))
 	for mode, file := range reelFiles {
 		reelSet, err := loadReelsCSV(filepath.Join(gamePath, file))
@@ -99,7 +94,7 @@ func validateGame(data loadedGame) error {
 		return fmt.Errorf("numRows must be greater than zero")
 	}
 	if len(data.reels) == 0 {
-		return fmt.Errorf("config reels or reelsFile is required")
+		return fmt.Errorf("config reels is required")
 	}
 	if _, ok := data.reels[ModeBase]; !ok {
 		return fmt.Errorf("base reels are required")
@@ -159,9 +154,6 @@ func validatePayEntries(kind string, entries []PayEntry) error {
 		}
 		if pay.Odds < 0 {
 			return fmt.Errorf("%s pay %d odds cannot be negative", kind, index)
-		}
-		if pay.ExpectedProbability < 0 {
-			return fmt.Errorf("%s pay %d expectedProbability cannot be negative", kind, index)
 		}
 		for mode, expected := range pay.ExpectedProbabilities {
 			if mode != ModeBase && mode != ModeFree {

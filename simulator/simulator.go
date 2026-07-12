@@ -100,11 +100,18 @@ func observe(summary *Summary, linePayCount int, result spin.Result) {
 		modeSummary.HitCount++
 	}
 	observePayHits(modeSummary.PayHits, linePayCount, result)
-	modeSummary.TotalLineWin += result.TotalLineWin
-	modeSummary.TotalScatterWin += result.TotalScatterWin
+	var lineWin, scatterWin int64
+	for _, win := range result.LineWins {
+		lineWin += win.Payout
+	}
+	for _, win := range result.ScatterWins {
+		scatterWin += win.Payout
+	}
+	modeSummary.TotalLineWin += lineWin
+	modeSummary.TotalScatterWin += scatterWin
 	modeSummary.TotalWin += result.TotalWin
-	summary.TotalLineWin += result.TotalLineWin
-	summary.TotalScatterWin += result.TotalScatterWin
+	summary.TotalLineWin += lineWin
+	summary.TotalScatterWin += scatterWin
 	summary.TotalWin += result.TotalWin
 }
 
