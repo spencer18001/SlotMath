@@ -11,6 +11,7 @@ type gameConfig struct {
 	GameID         string          `json:"gameId"`
 	Description    string          `json:"description"`
 	BetPerLine     int64           `json:"betPerLine"`
+	WayPayBet      int64           `json:"wayPayBet"`
 	NumReels       int             `json:"numReels"`
 	NumRows        int             `json:"numRows"`
 	ReelFiles      map[Mode]string `json:"reelFiles"`
@@ -128,6 +129,17 @@ func validateGame(data loadedGame) error {
 	for index, pay := range data.paytable.Line {
 		if pay.FreeSpins != 0 {
 			return fmt.Errorf("line pay %d cannot award freeSpins", index)
+		}
+	}
+	if err := validatePayEntries("way", data.paytable.Way); err != nil {
+		return err
+	}
+	if len(data.paytable.Way) > 0 && cfg.WayPayBet <= 0 {
+		return fmt.Errorf("wayPayBet must be greater than zero when way pays are configured")
+	}
+	for index, pay := range data.paytable.Way {
+		if pay.FreeSpins != 0 {
+			return fmt.Errorf("way pay %d cannot award freeSpins", index)
 		}
 	}
 	if err := validatePayEntries("scatter", data.paytable.Scatter); err != nil {

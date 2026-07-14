@@ -46,11 +46,19 @@ type ScatterWin struct {
 	Payout       int64
 }
 
+type WayWin struct {
+	PayRuleIndex int
+	Count        int
+	Ways         int64
+	Payout       int64
+}
+
 type Result struct {
 	Mode        Mode
 	Stops       []int
 	Board       Board
 	LineWins    []LineWin
+	WayWins     []WayWin
 	ScatterWins []ScatterWin
 	TotalWin    int64
 	FreeSpins   int
@@ -73,6 +81,7 @@ func (p PayEntry) ExpectedProbabilityFor(mode Mode) float64 {
 
 type Paytable struct {
 	Line    []PayEntry `json:"line"`
+	Way     []PayEntry `json:"way"`
 	Scatter []PayEntry `json:"scatter"`
 }
 
@@ -81,6 +90,7 @@ type Info struct {
 	Path         string
 	Seed         int64
 	BetPerLine   int64
+	WayPayBet    int64
 	ReelCount    int
 	PaylineCount int
 }

@@ -11,10 +11,12 @@ type Engine struct {
 	rng              *rand.Rand
 	generators       map[Mode]*generator
 	lineEvaluator    *lineEvaluator
+	wayEvaluator     *wayEvaluator
 	scatterEvaluator *scatterEvaluator
 	paylines         [][]int
 	paytable         Paytable
 	symbols          []string
+	wayPayBet        int64
 }
 
 func newEngine(data loadedGame, seed int64) (*Engine, error) {
@@ -46,18 +48,26 @@ func newEngine(data loadedGame, seed int64) (*Engine, error) {
 	return &Engine{
 		info: Info{
 			GameID: data.config.GameID, Path: data.path, Seed: seed,
-			BetPerLine: data.config.BetPerLine, ReelCount: len(baseReels), PaylineCount: len(data.paylines),
+			BetPerLine: data.config.BetPerLine, WayPayBet: data.config.WayPayBet,
+			ReelCount: len(baseReels), PaylineCount: len(data.paylines),
 		},
 		rng: rand.New(rand.NewSource(actualSeed)), generators: generators,
 		lineEvaluator:    newLineEvaluator(data.paylines, data.paytable, data.config.WildSymbols),
-		scatterEvaluator: newScatterEvaluator(data.config.ScatterSymbols, data.paytable),
-		paylines:         data.paylines, paytable: data.paytable, symbols: symbols,
+		wayEvaluator:     newWayEvaluator(data.paytable, data.config.WildSymbols, data.config.WayPayBet),
+		scatterEvaluator: newScatterEvaluator(data.config.ScatterSymbols, data.paytable, data.config.WayPayBet),
+		paylines:         data.paylines, paytable: data.paytable, symbols: symbols, wayPayBet: data.config.WayPayBet,
 	}, nil
 }
 
 func (g *Engine) ResolveBet(totalBet int64) (Bet, error) {
 	if totalBet <= 0 {
 		return Bet{}, fmt.Errorf("bet must be greater than zero")
+	}
+	if g.wayPayBet > 0 && totalBet%g.wayPayBet != 0 {
+		return Bet{}, fmt.Errorf("bet %d must be a multiple of wayPayBet %d", totalBet, g.wayPayBet)
+	}
+	if len(g.paytable.Line) == 0 {
+		return Bet{Total: totalBet, PerLine: g.info.BetPerLine, ActiveLines: 0}, nil
 	}
 	if totalBet%g.info.BetPerLine != 0 {
 		return Bet{}, fmt.Errorf("bet %d must be a multiple of bet per line %d", totalBet, g.info.BetPerLine)
@@ -70,6 +80,12 @@ func (g *Engine) ResolveBet(totalBet int64) (Bet, error) {
 }
 
 func (g *Engine) DefaultBet() Bet {
+	if len(g.paytable.Line) == 0 {
+		if len(g.paytable.Way) > 0 && g.wayPayBet > 0 {
+			return Bet{Total: g.wayPayBet, PerLine: g.info.BetPerLine, ActiveLines: 0}
+		}
+		return Bet{Total: g.info.BetPerLine, PerLine: g.info.BetPerLine, ActiveLines: 0}
+	}
 	return Bet{Total: g.info.BetPerLine * int64(g.info.PaylineCount), PerLine: g.info.BetPerLine, ActiveLines: g.info.PaylineCount}
 }
 
@@ -83,7 +99,14 @@ func (g *Engine) Spin(request Request) (Result, error) {
 		return Result{}, err
 	}
 	drawn := generator.draw(g.rng)
-	lineResult, err := g.lineEvaluator.evaluate(drawn.Board, bet.ActiveLines, bet.PerLine)
+	var lineResult lineResult
+	if len(g.paytable.Line) > 0 {
+		lineResult, err = g.lineEvaluator.evaluate(drawn.Board, bet.ActiveLines, bet.PerLine)
+		if err != nil {
+			return Result{}, err
+		}
+	}
+	wayResult, err := g.wayEvaluator.evaluate(drawn.Board, bet.Total)
 	if err != nil {
 		return Result{}, err
 	}
@@ -95,19 +118,20 @@ func (g *Engine) Spin(request Request) (Result, error) {
 	for _, win := range lineResult.wins {
 		totalWin += win.Payout
 	}
+	for _, win := range wayResult.wins {
+		totalWin += win.Payout
+	}
 	for _, win := range scatterResult.wins {
 		totalWin += win.Payout
 	}
 	return Result{
 		Mode:  mode,
 		Stops: drawn.Stops, Board: drawn.Board,
-		LineWins: lineResult.wins, ScatterWins: scatterResult.wins,
+		LineWins: lineResult.wins, WayWins: wayResult.wins, ScatterWins: scatterResult.wins,
 		TotalWin:  totalWin,
 		FreeSpins: scatterResult.freeSpins,
 	}, nil
 }
-
-
 
 func (g *Engine) generatorFor(mode Mode) (Mode, *generator, error) {
 	if mode == "" {
@@ -119,7 +143,6 @@ func (g *Engine) generatorFor(mode Mode) (Mode, *generator, error) {
 	}
 	return mode, generator, nil
 }
-
 
 func (g *Engine) Info() Info         { return g.info }
 func (g *Engine) Paytable() Paytable { return g.paytable }

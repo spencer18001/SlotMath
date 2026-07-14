@@ -27,6 +27,7 @@ type ModeSummary struct {
 	Mode            spin.Mode
 	Spins           int
 	TotalLineWin    int64
+	TotalWayWin     int64
 	TotalScatterWin int64
 	TotalWin        int64
 	HitCount        int
@@ -40,6 +41,7 @@ type Summary struct {
 	Bet             spin.Bet
 	TotalBet        int64
 	TotalLineWin    int64
+	TotalWayWin     int64
 	TotalScatterWin int64
 	TotalWin        int64
 	HitCount        int
@@ -65,7 +67,7 @@ func (s *Simulator) Run(request Request) (*Summary, error) {
 		Bet:      bet,
 		TotalBet: int64(request.Spins) * bet.Total,
 		Modes:    initialModeSummaries(engine.Modes(), paytable),
-		Status:   "generated boards and evaluated active line/scatter pays",
+		Status:   "generated boards and evaluated active line/way/scatter pays",
 	}
 
 	for round := 0; round < request.Spins; round++ {
@@ -76,13 +78,13 @@ func (s *Simulator) Run(request Request) (*Summary, error) {
 				return nil, err
 			}
 			state = step.State
-			observe(summary, len(paytable.Line), step.Spin)
+			observe(summary, len(paytable.Line), len(paytable.Way), step.Spin)
 		}
 	}
 	return summary, nil
 }
 
-func observe(summary *Summary, linePayCount int, result spin.Result) {
+func observe(summary *Summary, linePayCount, wayPayCount int, result spin.Result) {
 	summary.GeneratedSpins++
 	if result.Mode == spin.ModeFree {
 		summary.FreeSpins++
@@ -99,30 +101,41 @@ func observe(summary *Summary, linePayCount int, result spin.Result) {
 	if result.TotalWin > 0 {
 		modeSummary.HitCount++
 	}
-	observePayHits(modeSummary.PayHits, linePayCount, result)
-	var lineWin, scatterWin int64
+	observePayHits(modeSummary.PayHits, linePayCount, wayPayCount, result)
+	var lineWin, wayWin, scatterWin int64
 	for _, win := range result.LineWins {
 		lineWin += win.Payout
+	}
+	for _, win := range result.WayWins {
+		wayWin += win.Payout
 	}
 	for _, win := range result.ScatterWins {
 		scatterWin += win.Payout
 	}
 	modeSummary.TotalLineWin += lineWin
+	modeSummary.TotalWayWin += wayWin
 	modeSummary.TotalScatterWin += scatterWin
 	modeSummary.TotalWin += result.TotalWin
 	summary.TotalLineWin += lineWin
+	summary.TotalWayWin += wayWin
 	summary.TotalScatterWin += scatterWin
 	summary.TotalWin += result.TotalWin
 }
 
-func observePayHits(payHits []PayHitSummary, linePayCount int, result spin.Result) {
+func observePayHits(payHits []PayHitSummary, linePayCount, wayPayCount int, result spin.Result) {
 	for _, win := range result.LineWins {
 		if win.LineIndex == 0 && win.PayRuleIndex >= 0 && win.PayRuleIndex < linePayCount {
 			payHits[win.PayRuleIndex].Hits++
 		}
 	}
-	for _, win := range result.ScatterWins {
+	for _, win := range result.WayWins {
 		index := linePayCount + win.PayRuleIndex
+		if win.PayRuleIndex >= 0 && index < linePayCount+wayPayCount && index < len(payHits) {
+			payHits[index].Hits += win.Ways
+		}
+	}
+	for _, win := range result.ScatterWins {
+		index := linePayCount + wayPayCount + win.PayRuleIndex
 		if win.PayRuleIndex >= 0 && index < len(payHits) {
 			payHits[index].Hits++
 		}
@@ -158,6 +171,9 @@ func initialPayHitSummaries(mode spin.Mode, paytable spin.Paytable) []PayHitSumm
 	}
 	for _, pay := range paytable.Line {
 		appendPay("line", pay)
+	}
+	for _, pay := range paytable.Way {
+		appendPay("way", pay)
 	}
 	for _, pay := range paytable.Scatter {
 		appendPay("scatter", pay)

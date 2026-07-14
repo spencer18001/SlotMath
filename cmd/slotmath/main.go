@@ -127,8 +127,12 @@ func printSummary(engine *spin.Engine, summary *simulator.Summary, opts options,
 	fmt.Printf("Reels: %d\n", info.ReelCount)
 	fmt.Printf("Paylines: %d\n", info.PaylineCount)
 	fmt.Printf("Line pays: %d\n", len(paytable.Line))
+	fmt.Printf("Way pays: %d\n", len(paytable.Way))
 	fmt.Printf("Scatter pays: %d\n", len(paytable.Scatter))
 	fmt.Printf("Bet per line: %d\n", summary.Bet.PerLine)
+	if info.WayPayBet > 0 {
+		fmt.Printf("Way pay bet: %d\n", info.WayPayBet)
+	}
 	fmt.Printf("Active lines: %d\n", summary.Bet.ActiveLines)
 	fmt.Printf("Bet per spin: %d\n", summary.Bet.Total)
 	fmt.Printf("Total bet: %d\n", summary.TotalBet)
@@ -136,6 +140,7 @@ func printSummary(engine *spin.Engine, summary *simulator.Summary, opts options,
 		printModeWinSummary(modeSummary, summary.Bet.Total, summary.TotalBet)
 	}
 	fmt.Printf("Overall line RTP: %.2f%%\n", ratio(summary.TotalLineWin, summary.TotalBet)*100)
+	fmt.Printf("Overall way RTP: %.2f%%\n", ratio(summary.TotalWayWin, summary.TotalBet)*100)
 	fmt.Printf("Overall scatter RTP: %.2f%%\n", ratio(summary.TotalScatterWin, summary.TotalBet)*100)
 	fmt.Printf("Total RTP: %.2f%%\n", ratio(summary.TotalWin, summary.TotalBet)*100)
 	fmt.Printf("Hit count: %d\n", summary.HitCount)
@@ -173,6 +178,13 @@ func printSummary(engine *spin.Engine, summary *simulator.Summary, opts options,
 				fmt.Printf("  line %d: %-2s x%d odds %d payout %d\n", win.LineIndex, rule.Symbol, rule.Count, rule.Odds, win.Payout)
 			}
 		}
+		if len(summary.First.WayWins) > 0 {
+			fmt.Println("First way wins:")
+			for _, win := range summary.First.WayWins {
+				rule := paytable.Way[win.PayRuleIndex]
+				fmt.Printf("  %-2s x%d ways %d odds %d payout %d\n", rule.Symbol, win.Count, win.Ways, rule.Odds, win.Payout)
+			}
+		}
 	}
 	fmt.Printf("Elapsed: %s\n", elapsed)
 }
@@ -180,6 +192,7 @@ func printSummary(engine *spin.Engine, summary *simulator.Summary, opts options,
 func printModeWinSummary(summary simulator.ModeSummary, betPerSpin int64, totalBet int64) {
 	modeBet := int64(summary.Spins) * betPerSpin
 	fmt.Printf("%s line RTP: %.2f%%\n", summary.Mode, ratio(summary.TotalLineWin, modeBet)*100)
+	fmt.Printf("%s way RTP: %.2f%%\n", summary.Mode, ratio(summary.TotalWayWin, modeBet)*100)
 	fmt.Printf("%s scatter RTP: %.2f%%\n", summary.Mode, ratio(summary.TotalScatterWin, modeBet)*100)
 	fmt.Printf("%s RTP: %.2f%%\n", summary.Mode, ratio(summary.TotalWin, modeBet)*100)
 	if summary.Mode != spin.ModeBase {
