@@ -1,0 +1,15 @@
+{
+  "gameId": "independent",
+  "description": "Independent Reels 3x3 Sample",
+  "betPerLine": 1,
+  "drawMode": "independentRows",
+  "numReels": 3,
+  "numRows": 3,
+  "reelFiles": {
+    "base": "reels.csv"
+  },
+  "paylinesFile": "paylines.json",
+  "paytableFile": "paytable.json",
+  "wildSymbols": ["W"],
+  "scatterSymbols": []
+}

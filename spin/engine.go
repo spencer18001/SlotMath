@@ -24,9 +24,13 @@ func newEngine(data loadedGame, seed int64) (*Engine, error) {
 	if actualSeed == 0 {
 		actualSeed = time.Now().UnixNano()
 	}
+	drawMode, err := parseDrawMode(data.config.DrawMode)
+	if err != nil {
+		return nil, err
+	}
 	generators := make(map[Mode]*generator, len(data.reels))
 	for mode, reels := range data.reels {
-		generator, err := newGenerator(reels, data.config.NumRows)
+		generator, err := newGenerator(reels, data.config.NumRows, drawMode)
 		if err != nil {
 			return nil, fmt.Errorf("create %s generator: %w", mode, err)
 		}
@@ -48,7 +52,7 @@ func newEngine(data loadedGame, seed int64) (*Engine, error) {
 	return &Engine{
 		info: Info{
 			GameID: data.config.GameID, Path: data.path, Seed: seed,
-			BetPerLine: data.config.BetPerLine, WayPayBet: data.config.WayPayBet,
+			BetPerLine: data.config.BetPerLine, WayPayBet: data.config.WayPayBet, DrawMode: string(drawMode),
 			ReelCount: len(baseReels), PaylineCount: len(data.paylines),
 		},
 		rng: rand.New(rand.NewSource(actualSeed)), generators: generators,

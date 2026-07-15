@@ -57,6 +57,10 @@ games/fg/
 ```
 
 Reel CSV columns may have different lengths. An empty trailing cell means that reel has no stop on that row.
+`drawMode` controls how a visible board is drawn:
+
+- Omitted or `reelStrips`: each reel draws one stop, then visible rows are consecutive symbols from that reel strip.
+- `independentRows`: each visible row independently draws one stop from that reel's strip. This models independent-reel samples where the same column uses one strip distribution, but every cell is sampled independently.
 
 A scatter rule may award free spins. `spin.Result.FreeSpins` is the number newly awarded by that spin; remaining free spins belong to `flow.State`.
 
@@ -165,3 +169,4 @@ Pattern-probe flags:
 ```
 
 For line patterns, each condition checks the selected payline (`-line 0` by default). For scatter patterns, each condition checks the complete visible reel window. `-` accepts anything, a concatenated token such as `WK` accepts either configured symbol, and `!WK` excludes both.
+

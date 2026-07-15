@@ -91,6 +91,7 @@ type Info struct {
 	Seed         int64
 	BetPerLine   int64
 	WayPayBet    int64
+	DrawMode     string
 	ReelCount    int
 	PaylineCount int
 }

@@ -12,6 +12,7 @@ type gameConfig struct {
 	Description    string          `json:"description"`
 	BetPerLine     int64           `json:"betPerLine"`
 	WayPayBet      int64           `json:"wayPayBet"`
+	DrawMode       string          `json:"drawMode,omitempty"`
 	NumReels       int             `json:"numReels"`
 	NumRows        int             `json:"numRows"`
 	ReelFiles      map[Mode]string `json:"reelFiles"`
@@ -87,6 +88,9 @@ func validateGame(data loadedGame) error {
 	}
 	if cfg.BetPerLine <= 0 {
 		return fmt.Errorf("betPerLine must be greater than zero")
+	}
+	if _, err := parseDrawMode(cfg.DrawMode); err != nil {
+		return err
 	}
 	if cfg.NumReels <= 0 {
 		return fmt.Errorf("numReels must be greater than zero")
