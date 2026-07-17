@@ -32,21 +32,25 @@ func (e *scatterEvaluator) evaluate(b Board, totalBet int64) (scatterResult, err
 	if totalBet <= 0 {
 		return scatterResult{}, fmt.Errorf("total bet must be greater than zero")
 	}
-	counts := make(map[string]int)
-	for _, reel := range b {
-		for _, symbol := range reel {
+	positionsBySymbol := make(map[string][]Position)
+	for reelIndex, reel := range b {
+		for rowIndex, symbol := range reel {
 			if e.symbols[symbol] {
-				counts[symbol]++
+				positionsBySymbol[symbol] = append(positionsBySymbol[symbol], Position{Reel: reelIndex, Row: rowIndex})
 			}
 		}
 	}
 	var result scatterResult
-	for symbol, count := range counts {
-		rule, ok := e.paytable[payKey{symbol: symbol, count: count}]
+	for symbol, positions := range positionsBySymbol {
+		rule, ok := e.paytable[payKey{symbol: symbol, count: len(positions)}]
 		if !ok || (rule.odds <= 0 && rule.freeSpins <= 0) {
 			continue
 		}
-		win := ScatterWin{PayRuleIndex: rule.index, Payout: rule.odds * totalBet / e.payBet}
+		win := ScatterWin{
+			PayRuleIndex: rule.index,
+			Payout:       rule.odds * totalBet / e.payBet,
+			Positions:    append([]Position(nil), positions...),
+		}
 		result.wins = append(result.wins, win)
 		result.freeSpins += rule.freeSpins
 	}

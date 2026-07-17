@@ -69,9 +69,9 @@ func (e *lineEvaluator) evaluateLine(lineIndex int, payline []int, b Board, betP
 		return LineWin{}, false
 	}
 	if hasWildRule && (!hasBaseRule || wildRule.odds > baseRule.odds) {
-		return buildLineWin(lineIndex, wildRule, betPerLine), true
+		return buildLineWin(lineIndex, payline, wildRule, match.leadingWildCount, betPerLine), true
 	}
-	return buildLineWin(lineIndex, baseRule, betPerLine), true
+	return buildLineWin(lineIndex, payline, baseRule, match.baseCount, betPerLine), true
 }
 
 func analyzeLine(symbols []string, wilds map[string]bool) lineMatch {
@@ -108,8 +108,24 @@ func (e *lineEvaluator) lookup(symbol string, count int) (payRule, bool) {
 	return rule, ok && rule.odds > 0
 }
 
-func buildLineWin(lineIndex int, rule payRule, betPerLine int64) LineWin {
-	return LineWin{LineIndex: lineIndex, PayRuleIndex: rule.index, Payout: rule.odds * betPerLine}
+func buildLineWin(lineIndex int, payline []int, rule payRule, count int, betPerLine int64) LineWin {
+	return LineWin{
+		LineIndex:    lineIndex,
+		PayRuleIndex: rule.index,
+		Payout:       rule.odds * betPerLine,
+		Positions:    linePositions(payline, count),
+	}
+}
+
+func linePositions(payline []int, count int) []Position {
+	if count > len(payline) {
+		count = len(payline)
+	}
+	positions := make([]Position, 0, count)
+	for reel := 0; reel < count; reel++ {
+		positions = append(positions, Position{Reel: reel, Row: payline[reel]})
+	}
+	return positions
 }
 
 func symbolsForPayline(b Board, payline []int) []string {

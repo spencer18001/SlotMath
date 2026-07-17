@@ -18,7 +18,23 @@ type Bet struct {
 	ActiveLines int
 }
 
+type Position struct {
+	Reel int
+	Row  int
+}
+
 type Board [][]string // [reel][row] -> symbol
+
+func (b Board) Clone() Board {
+	if len(b) == 0 {
+		return nil
+	}
+	clone := make(Board, len(b))
+	for reel := range b {
+		clone[reel] = append([]string(nil), b[reel]...)
+	}
+	return clone
+}
 
 func (b Board) Rows() [][]string {
 	if len(b) == 0 {
@@ -39,11 +55,13 @@ type LineWin struct {
 	LineIndex    int
 	PayRuleIndex int
 	Payout       int64
+	Positions    []Position
 }
 
 type ScatterWin struct {
 	PayRuleIndex int
 	Payout       int64
+	Positions    []Position
 }
 
 type WayWin struct {
@@ -51,17 +69,31 @@ type WayWin struct {
 	Count        int
 	Ways         int64
 	Payout       int64
+	Positions    []Position
+}
+
+type CascadeStep struct {
+	Index            int
+	BoardBefore      Board
+	BoardAfter       Board
+	RemovedPositions []Position
+	LineWins         []LineWin
+	WayWins          []WayWin
+	ScatterWins      []ScatterWin
+	TotalWin         int64
 }
 
 type Result struct {
-	Mode        Mode
-	Stops       []int
-	Board       Board
-	LineWins    []LineWin
-	WayWins     []WayWin
-	ScatterWins []ScatterWin
-	TotalWin    int64
-	FreeSpins   int
+	Mode         Mode
+	Stops        []int
+	Board        Board
+	InitialBoard Board
+	LineWins     []LineWin
+	WayWins      []WayWin
+	ScatterWins  []ScatterWin
+	CascadeSteps []CascadeStep
+	TotalWin     int64
+	FreeSpins    int
 }
 
 type PayEntry struct {
@@ -92,6 +124,7 @@ type Info struct {
 	BetPerLine   int64
 	WayPayBet    int64
 	DrawMode     string
+	Cascading    bool
 	ReelCount    int
 	PaylineCount int
 }

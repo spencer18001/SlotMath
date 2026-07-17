@@ -136,7 +136,7 @@ func RunPatternProbe(engine *spin.Engine, spins int, mode spin.Mode, lineIndex i
 		if err != nil {
 			return nil, err
 		}
-		if matchesPattern(pattern, spinResult.Board, result.Payline) {
+		if matchesPattern(pattern, spinResult.InitialBoard, result.Payline) {
 			result.Hits++
 		}
 	}

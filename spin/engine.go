@@ -6,6 +6,8 @@ import (
 	"time"
 )
 
+const maxCascadeSteps = 100
+
 type Engine struct {
 	info             Info
 	rng              *rand.Rand
@@ -17,6 +19,7 @@ type Engine struct {
 	paytable         Paytable
 	symbols          []string
 	wayPayBet        int64
+	cascading        bool
 }
 
 func newEngine(data loadedGame, seed int64) (*Engine, error) {
@@ -52,14 +55,16 @@ func newEngine(data loadedGame, seed int64) (*Engine, error) {
 	return &Engine{
 		info: Info{
 			GameID: data.config.GameID, Path: data.path, Seed: seed,
-			BetPerLine: data.config.BetPerLine, WayPayBet: data.config.WayPayBet, DrawMode: string(drawMode),
+			BetPerLine: data.config.BetPerLine, WayPayBet: data.config.WayPayBet,
+			DrawMode: string(drawMode), Cascading: data.config.Cascading,
 			ReelCount: len(baseReels), PaylineCount: len(data.paylines),
 		},
 		rng: rand.New(rand.NewSource(actualSeed)), generators: generators,
 		lineEvaluator:    newLineEvaluator(data.paylines, data.paytable, data.config.WildSymbols),
 		wayEvaluator:     newWayEvaluator(data.paytable, data.config.WildSymbols, data.config.WayPayBet),
 		scatterEvaluator: newScatterEvaluator(data.config.ScatterSymbols, data.paytable, data.config.WayPayBet),
-		paylines:         data.paylines, paytable: data.paytable, symbols: symbols, wayPayBet: data.config.WayPayBet,
+		paylines:         data.paylines, paytable: data.paytable, symbols: symbols,
+		wayPayBet: data.config.WayPayBet, cascading: data.config.Cascading,
 	}, nil
 }
 
@@ -103,38 +108,140 @@ func (g *Engine) Spin(request Request) (Result, error) {
 		return Result{}, err
 	}
 	drawn := generator.draw(g.rng)
-	var lineResult lineResult
-	if len(g.paytable.Line) > 0 {
-		lineResult, err = g.lineEvaluator.evaluate(drawn.Board, bet.ActiveLines, bet.PerLine)
+	if !g.cascading {
+		return g.evaluateSingle(mode, drawn, bet)
+	}
+	return g.evaluateCascading(mode, generator, drawn, bet)
+}
+
+func (g *Engine) evaluateSingle(mode Mode, drawn drawResult, bet Bet) (Result, error) {
+	eval, err := g.evaluateBoard(drawn.Board, bet)
+	if err != nil {
+		return Result{}, err
+	}
+	return Result{
+		Mode: mode, Stops: drawn.Stops, Board: drawn.Board, InitialBoard: drawn.Board.Clone(),
+		LineWins: eval.lineWins, WayWins: eval.wayWins, ScatterWins: eval.scatterWins,
+		TotalWin: eval.totalWin, FreeSpins: eval.freeSpins,
+	}, nil
+}
+
+func (g *Engine) evaluateCascading(mode Mode, generator *generator, drawn drawResult, bet Bet) (Result, error) {
+	initialStops := append([]int(nil), drawn.Stops...)
+	stops := append([]int(nil), drawn.Stops...)
+	board := drawn.Board.Clone()
+	result := Result{Mode: mode, Stops: initialStops, InitialBoard: drawn.Board.Clone()}
+	for stepIndex := 0; stepIndex < maxCascadeSteps; stepIndex++ {
+		before := board.Clone()
+		eval, err := g.evaluateBoard(board, bet)
 		if err != nil {
 			return Result{}, err
 		}
+		result.LineWins = append(result.LineWins, eval.lineWins...)
+		result.WayWins = append(result.WayWins, eval.wayWins...)
+		result.ScatterWins = append(result.ScatterWins, eval.scatterWins...)
+		result.TotalWin += eval.totalWin
+		result.FreeSpins += eval.freeSpins
+		remove := removeMask(board, eval.lineWins, eval.wayWins, eval.scatterWins)
+		if maskEmpty(remove) {
+			result.Board = board.Clone()
+			return result, nil
+		}
+		after, nextStops, removed, err := generator.tumble(board, stops, remove)
+		if err != nil {
+			return Result{}, err
+		}
+		result.CascadeSteps = append(result.CascadeSteps, CascadeStep{
+			Index: stepIndex, BoardBefore: before, BoardAfter: after.Clone(),
+			RemovedPositions: removed,
+			LineWins:         append([]LineWin(nil), eval.lineWins...),
+			WayWins:          append([]WayWin(nil), eval.wayWins...),
+			ScatterWins:      append([]ScatterWin(nil), eval.scatterWins...),
+			TotalWin:         eval.totalWin,
+		})
+		board = after
+		stops = nextStops
 	}
-	wayResult, err := g.wayEvaluator.evaluate(drawn.Board, bet.Total)
+	return Result{}, fmt.Errorf("cascade exceeded max steps %d", maxCascadeSteps)
+}
+
+type boardEvaluation struct {
+	lineWins    []LineWin
+	wayWins     []WayWin
+	scatterWins []ScatterWin
+	totalWin    int64
+	freeSpins   int
+}
+
+func (g *Engine) evaluateBoard(board Board, bet Bet) (boardEvaluation, error) {
+	var eval boardEvaluation
+	if len(g.paytable.Line) > 0 {
+		lineResult, err := g.lineEvaluator.evaluate(board, bet.ActiveLines, bet.PerLine)
+		if err != nil {
+			return boardEvaluation{}, err
+		}
+		eval.lineWins = lineResult.wins
+	}
+	wayResult, err := g.wayEvaluator.evaluate(board, bet.Total)
 	if err != nil {
-		return Result{}, err
+		return boardEvaluation{}, err
 	}
-	scatterResult, err := g.scatterEvaluator.evaluate(drawn.Board, bet.Total)
+	scatterResult, err := g.scatterEvaluator.evaluate(board, bet.Total)
 	if err != nil {
-		return Result{}, err
+		return boardEvaluation{}, err
 	}
-	var totalWin int64
-	for _, win := range lineResult.wins {
-		totalWin += win.Payout
+	eval.wayWins = wayResult.wins
+	eval.scatterWins = scatterResult.wins
+	eval.freeSpins = scatterResult.freeSpins
+	for _, win := range eval.lineWins {
+		eval.totalWin += win.Payout
 	}
-	for _, win := range wayResult.wins {
-		totalWin += win.Payout
+	for _, win := range eval.wayWins {
+		eval.totalWin += win.Payout
 	}
-	for _, win := range scatterResult.wins {
-		totalWin += win.Payout
+	for _, win := range eval.scatterWins {
+		eval.totalWin += win.Payout
 	}
-	return Result{
-		Mode:  mode,
-		Stops: drawn.Stops, Board: drawn.Board,
-		LineWins: lineResult.wins, WayWins: wayResult.wins, ScatterWins: scatterResult.wins,
-		TotalWin:  totalWin,
-		FreeSpins: scatterResult.freeSpins,
-	}, nil
+	return eval, nil
+}
+
+func removeMask(board Board, lineWins []LineWin, wayWins []WayWin, scatterWins []ScatterWin) [][]bool {
+	mask := make([][]bool, len(board))
+	for reel := range board {
+		mask[reel] = make([]bool, len(board[reel]))
+	}
+	mark := func(positions []Position) {
+		for _, position := range positions {
+			if position.Reel < 0 || position.Reel >= len(mask) {
+				continue
+			}
+			if position.Row < 0 || position.Row >= len(mask[position.Reel]) {
+				continue
+			}
+			mask[position.Reel][position.Row] = true
+		}
+	}
+	for _, win := range lineWins {
+		mark(win.Positions)
+	}
+	for _, win := range wayWins {
+		mark(win.Positions)
+	}
+	for _, win := range scatterWins {
+		mark(win.Positions)
+	}
+	return mask
+}
+
+func maskEmpty(mask [][]bool) bool {
+	for _, reel := range mask {
+		for _, removed := range reel {
+			if removed {
+				return false
+			}
+		}
+	}
+	return true
 }
 
 func (g *Engine) generatorFor(mode Mode) (Mode, *generator, error) {

@@ -57,6 +57,8 @@ games/fg/
 ```
 
 Reel CSV columns may have different lengths. An empty trailing cell means that reel has no stop on that row.
+
+Set `cascading` to `true` for tumbling/cascading games. A spin still appears as one completed `Engine.Spin` result to callers, but internally it repeats evaluate -> remove winning positions -> refill from reel strips until no win remains. Cascade steps do not add bet; they are reported separately as `CascadeSteps`.
 `drawMode` controls how a visible board is drawn:
 
 - Omitted or `reelStrips`: each reel draws one stop, then visible rows are consecutive symbols from that reel strip.

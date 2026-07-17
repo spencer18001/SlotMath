@@ -34,7 +34,7 @@ func (e *wayEvaluator) evaluate(b Board, totalBet int64) (wayResult, error) {
 			continue
 		}
 		seen[pay.Symbol] = true
-		count, ways := e.countWays(pay.Symbol, b)
+		count, ways, positions := e.countWays(pay.Symbol, b)
 		if count <= 0 || ways <= 0 {
 			continue
 		}
@@ -47,29 +47,32 @@ func (e *wayEvaluator) evaluate(b Board, totalBet int64) (wayResult, error) {
 			Count:        count,
 			Ways:         ways,
 			Payout:       rule.odds * ways * totalBet / e.payBet,
+			Positions:    positions,
 		})
 	}
 	return result, nil
 }
 
-func (e *wayEvaluator) countWays(symbol string, b Board) (int, int64) {
+func (e *wayEvaluator) countWays(symbol string, b Board) (int, int64, []Position) {
 	ways := int64(1)
+	var positions []Position
 	for reelIndex, reel := range b {
-		hits := e.countReelHits(symbol, reel)
-		if hits == 0 {
-			return reelIndex, ways
+		reelPositions := e.reelHitPositions(symbol, reelIndex, reel)
+		if len(reelPositions) == 0 {
+			return reelIndex, ways, positions
 		}
-		ways *= int64(hits)
+		ways *= int64(len(reelPositions))
+		positions = append(positions, reelPositions...)
 	}
-	return len(b), ways
+	return len(b), ways, positions
 }
 
-func (e *wayEvaluator) countReelHits(symbol string, visibleReel []string) int {
-	hits := 0
-	for _, visible := range visibleReel {
+func (e *wayEvaluator) reelHitPositions(symbol string, reelIndex int, visibleReel []string) []Position {
+	var positions []Position
+	for rowIndex, visible := range visibleReel {
 		if visible == symbol || e.wilds[visible] {
-			hits++
+			positions = append(positions, Position{Reel: reelIndex, Row: rowIndex})
 		}
 	}
-	return hits
+	return positions
 }

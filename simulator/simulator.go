@@ -26,11 +26,13 @@ type PayHitSummary struct {
 type ModeSummary struct {
 	Mode            spin.Mode
 	Spins           int
+	CascadeSteps    int
 	TotalLineWin    int64
 	TotalWayWin     int64
 	TotalScatterWin int64
 	TotalWin        int64
 	HitCount        int
+	CascadeHitCount int
 	PayHits         []PayHitSummary
 }
 
@@ -38,6 +40,7 @@ type Summary struct {
 	Spins           int
 	GeneratedSpins  int
 	FreeSpins       int
+	CascadeSteps    int
 	Bet             spin.Bet
 	TotalBet        int64
 	TotalLineWin    int64
@@ -45,6 +48,7 @@ type Summary struct {
 	TotalScatterWin int64
 	TotalWin        int64
 	HitCount        int
+	CascadeHitCount int
 	Modes           []ModeSummary
 	First           *spin.Result
 	Status          string
@@ -96,10 +100,22 @@ func observe(summary *Summary, linePayCount, wayPayCount int, result spin.Result
 	if result.TotalWin > 0 {
 		summary.HitCount++
 	}
+	summary.CascadeSteps += len(result.CascadeSteps)
+	for _, step := range result.CascadeSteps {
+		if step.TotalWin > 0 {
+			summary.CascadeHitCount++
+		}
+	}
 	modeSummary := modeSummaryFor(summary, result.Mode)
 	modeSummary.Spins++
+	modeSummary.CascadeSteps += len(result.CascadeSteps)
 	if result.TotalWin > 0 {
 		modeSummary.HitCount++
+	}
+	for _, step := range result.CascadeSteps {
+		if step.TotalWin > 0 {
+			modeSummary.CascadeHitCount++
+		}
 	}
 	observePayHits(modeSummary.PayHits, linePayCount, wayPayCount, result)
 	var lineWin, wayWin, scatterWin int64
@@ -123,23 +139,32 @@ func observe(summary *Summary, linePayCount, wayPayCount int, result spin.Result
 }
 
 func observePayHits(payHits []PayHitSummary, linePayCount, wayPayCount int, result spin.Result) {
-	for _, win := range result.LineWins {
+	lineWins, wayWins, scatterWins := initialPayWins(result)
+	for _, win := range lineWins {
 		if win.LineIndex == 0 && win.PayRuleIndex >= 0 && win.PayRuleIndex < linePayCount {
 			payHits[win.PayRuleIndex].Hits++
 		}
 	}
-	for _, win := range result.WayWins {
+	for _, win := range wayWins {
 		index := linePayCount + win.PayRuleIndex
 		if win.PayRuleIndex >= 0 && index < linePayCount+wayPayCount && index < len(payHits) {
 			payHits[index].Hits += win.Ways
 		}
 	}
-	for _, win := range result.ScatterWins {
+	for _, win := range scatterWins {
 		index := linePayCount + wayPayCount + win.PayRuleIndex
 		if win.PayRuleIndex >= 0 && index < len(payHits) {
 			payHits[index].Hits++
 		}
 	}
+}
+
+func initialPayWins(result spin.Result) ([]spin.LineWin, []spin.WayWin, []spin.ScatterWin) {
+	if len(result.CascadeSteps) == 0 {
+		return result.LineWins, result.WayWins, result.ScatterWins
+	}
+	first := result.CascadeSteps[0]
+	return first.LineWins, first.WayWins, first.ScatterWins
 }
 
 func modeSummaryFor(summary *Summary, mode spin.Mode) *ModeSummary {

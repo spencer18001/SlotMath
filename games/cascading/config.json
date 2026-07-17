@@ -1,0 +1,15 @@
+{
+  "gameId": "cascading",
+  "description": "Sample Lines with Cascading Reels",
+  "betPerLine": 1,
+  "cascading": true,
+  "numReels": 5,
+  "numRows": 3,
+  "reelFiles": {
+    "base": "reels.csv"
+  },
+  "paylinesFile": "paylines.json",
+  "paytableFile": "paytable.json",
+  "wildSymbols": ["W"],
+  "scatterSymbols": ["S"]
+}

@@ -133,6 +133,9 @@ func printSummary(engine *spin.Engine, summary *simulator.Summary, opts options,
 	if info.WayPayBet > 0 {
 		fmt.Printf("Way pay bet: %d\n", info.WayPayBet)
 	}
+	if info.Cascading {
+		fmt.Println("Cascading: true")
+	}
 	fmt.Printf("Active lines: %d\n", summary.Bet.ActiveLines)
 	fmt.Printf("Bet per spin: %d\n", summary.Bet.Total)
 	fmt.Printf("Total bet: %d\n", summary.TotalBet)
@@ -144,6 +147,11 @@ func printSummary(engine *spin.Engine, summary *simulator.Summary, opts options,
 	fmt.Printf("Overall scatter RTP: %.2f%%\n", ratio(summary.TotalScatterWin, summary.TotalBet)*100)
 	fmt.Printf("Total RTP: %.2f%%\n", ratio(summary.TotalWin, summary.TotalBet)*100)
 	fmt.Printf("Hit count: %d\n", summary.HitCount)
+	if info.Cascading || summary.CascadeSteps > 0 {
+		fmt.Printf("Cascade steps: %d\n", summary.CascadeSteps)
+		fmt.Printf("Average cascade steps per generated spin: %.4f\n", ratioInt(summary.CascadeSteps, summary.GeneratedSpins))
+		fmt.Printf("Cascade hit count: %d\n", summary.CascadeHitCount)
+	}
 	if opts.Verbose {
 		for _, modeSummary := range summary.Modes {
 			printPayHitSummary(modeSummary)
@@ -152,7 +160,7 @@ func printSummary(engine *spin.Engine, summary *simulator.Summary, opts options,
 	if summary.First != nil {
 		fmt.Printf("First stops: %v\n", summary.First.Stops)
 		fmt.Println("First board:")
-		for _, row := range summary.First.Board.Rows() {
+		for _, row := range summary.First.InitialBoard.Rows() {
 			fmt.Print("  ")
 			for index, symbol := range row {
 				if index > 0 {
@@ -161,6 +169,20 @@ func printSummary(engine *spin.Engine, summary *simulator.Summary, opts options,
 				fmt.Printf("%2s", symbol)
 			}
 			fmt.Println()
+		}
+		if len(summary.First.CascadeSteps) > 0 {
+			fmt.Println("First final board:")
+			for _, row := range summary.First.Board.Rows() {
+				fmt.Print("  ")
+				for index, symbol := range row {
+					if index > 0 {
+						fmt.Print(" | ")
+					}
+					fmt.Printf("%2s", symbol)
+				}
+				fmt.Println()
+			}
+			fmt.Printf("First cascade steps: %d\n", len(summary.First.CascadeSteps))
 		}
 		fmt.Printf("First win: %d\n", summary.First.TotalWin)
 		fmt.Printf("First free spins awarded: %d\n", summary.First.FreeSpins)
@@ -195,6 +217,9 @@ func printModeWinSummary(summary simulator.ModeSummary, betPerSpin int64, totalB
 	fmt.Printf("%s way RTP: %.2f%%\n", summary.Mode, ratio(summary.TotalWayWin, modeBet)*100)
 	fmt.Printf("%s scatter RTP: %.2f%%\n", summary.Mode, ratio(summary.TotalScatterWin, modeBet)*100)
 	fmt.Printf("%s RTP: %.2f%%\n", summary.Mode, ratio(summary.TotalWin, modeBet)*100)
+	if summary.CascadeSteps > 0 {
+		fmt.Printf("%s average cascade steps: %.4f\n", summary.Mode, ratioInt(summary.CascadeSteps, summary.Spins))
+	}
 	if summary.Mode != spin.ModeBase {
 		fmt.Printf("%s RTP contribution: %.2f%%\n", summary.Mode, ratio(summary.TotalWin, totalBet)*100)
 	}
@@ -204,7 +229,7 @@ func printPayHitSummary(summary simulator.ModeSummary) {
 	if len(summary.PayHits) == 0 || summary.Spins == 0 {
 		return
 	}
-	fmt.Printf("%s pay hit summary (line pays use payline 0):\n", summary.Mode)
+	fmt.Printf("%s initial-board pay hit summary (line pays use payline 0):\n", summary.Mode)
 	for _, hit := range summary.PayHits {
 		probability := ratio(hit.Hits, int64(summary.Spins))
 		if hit.ExpectedProbability == 0 {
@@ -235,6 +260,13 @@ func printProbeComparison(actual, expected float64, spins int) {
 }
 
 func ratio(numerator int64, denominator int64) float64 {
+	if denominator == 0 {
+		return 0
+	}
+	return float64(numerator) / float64(denominator)
+}
+
+func ratioInt(numerator int, denominator int) float64 {
 	if denominator == 0 {
 		return 0
 	}
