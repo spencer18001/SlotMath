@@ -5,29 +5,33 @@ import (
 	"math/rand"
 )
 
-type drawMode string
+// 抽取盤面的模式
+type DrawMode string
 
 const (
-	drawModeReelStrips      drawMode = "reelStrips"
-	drawModeIndependentRows drawMode = "independentRows"
+	drawModeReelStrips      DrawMode = "reelStrips"      // 每軸只停一次, 每列為同一條輪帶的連續符號
+	drawModeIndependentRows DrawMode = "independentRows" // 同一軸的不同列為獨立滾輪, 共用 reel strip, 但各自抽一個停輪位置
 )
 
-type drawResult struct {
-	Stops []int
-	Board Board
+// 抽取盤面的結果
+type DrawResult struct {
+	Stops []int // 每個滾輪的停輪索引
+	Board Board // 盤面
 }
 
-type generator struct {
-	reels [][]string
-	rows  int
-	mode  drawMode
+// 盤面生成
+type Generator struct {
+	reels [][]string // 滾輪帶
+	rows  int        // 盤面的每一軸有幾列
+	mode  DrawMode   // 抽取盤面的模式
 }
 
-func parseDrawMode(value string) (drawMode, error) {
+// 解析 DrawMode
+func parseDrawMode(value string) (DrawMode, error) {
 	if value == "" {
 		return drawModeReelStrips, nil
 	}
-	mode := drawMode(value)
+	mode := DrawMode(value)
 	switch mode {
 	case drawModeReelStrips, drawModeIndependentRows:
 		return mode, nil
@@ -36,7 +40,8 @@ func parseDrawMode(value string) (drawMode, error) {
 	}
 }
 
-func newGenerator(reels [][]string, rows int, mode drawMode) (*generator, error) {
+// 建立 Generator
+func newGenerator(reels [][]string, rows int, mode DrawMode) (*Generator, error) {
 	if rows <= 0 {
 		return nil, fmt.Errorf("rows must be greater than zero")
 	}
@@ -48,10 +53,11 @@ func newGenerator(reels [][]string, rows int, mode drawMode) (*generator, error)
 			return nil, fmt.Errorf("reel %d has %d stops, needs at least %d", reelIndex, len(reel), rows)
 		}
 	}
-	return &generator{reels: reels, rows: rows, mode: mode}, nil
+	return &Generator{reels: reels, rows: rows, mode: mode}, nil
 }
 
-func (g *generator) draw(rng *rand.Rand) drawResult {
+// 抽取盤面
+func (g *Generator) draw(rng *rand.Rand) DrawResult {
 	switch g.mode {
 	case drawModeIndependentRows:
 		return g.drawIndependentRows(rng)
@@ -60,37 +66,41 @@ func (g *generator) draw(rng *rand.Rand) drawResult {
 	}
 }
 
-func (g *generator) drawReelStrips(rng *rand.Rand) drawResult {
+// 抽取盤面.ReelStrips
+func (g *Generator) drawReelStrips(rng *rand.Rand) DrawResult {
 	stops := make([]int, len(g.reels))
-	visible := make(Board, len(g.reels))
+	board := make(Board, len(g.reels))
 	for reelIndex, reel := range g.reels {
 		stop := rng.Intn(len(reel))
 		stops[reelIndex] = stop
-		visibleReel := make([]string, g.rows)
+
+		boardReel := make([]string, g.rows)
 		for row := 0; row < g.rows; row++ {
-			visibleReel[row] = reel[(stop+row)%len(reel)]
+			boardReel[row] = reel[(stop+row)%len(reel)]
 		}
-		visible[reelIndex] = visibleReel
+		board[reelIndex] = boardReel
 	}
-	return drawResult{Stops: stops, Board: visible}
+	return DrawResult{Stops: stops, Board: board}
 }
 
-func (g *generator) drawIndependentRows(rng *rand.Rand) drawResult {
+// 抽取盤面.IndependentRows
+func (g *Generator) drawIndependentRows(rng *rand.Rand) DrawResult {
 	stops := make([]int, len(g.reels)*g.rows)
-	visible := make(Board, len(g.reels))
+	board := make(Board, len(g.reels))
 	for reelIndex, reel := range g.reels {
-		visibleReel := make([]string, g.rows)
+		boardReel := make([]string, g.rows)
 		for row := 0; row < g.rows; row++ {
 			stop := rng.Intn(len(reel))
 			stops[reelIndex*g.rows+row] = stop
-			visibleReel[row] = reel[stop]
+
+			boardReel[row] = reel[stop]
 		}
-		visible[reelIndex] = visibleReel
+		board[reelIndex] = boardReel
 	}
-	return drawResult{Stops: stops, Board: visible}
+	return DrawResult{Stops: stops, Board: board}
 }
 
-func (g *generator) tumble(board Board, stops []int, remove [][]bool) (Board, []int, []Position, error) {
+func (g *Generator) tumble(board Board, stops []int, remove [][]bool) (Board, []int, []Position, error) {
 	if g.mode != drawModeReelStrips {
 		return nil, nil, nil, fmt.Errorf("cascading tumble requires drawMode %q", drawModeReelStrips)
 	}

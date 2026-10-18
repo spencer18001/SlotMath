@@ -23,7 +23,7 @@ type Position struct {
 	Row  int
 }
 
-type Board [][]string // [reel][row] -> symbol
+type Board [][]string // 盤面 ([reel][row] -> symbol)
 
 func (b Board) Clone() Board {
 	if len(b) == 0 {
@@ -96,10 +96,11 @@ type Result struct {
 	FreeSpins    int
 }
 
+// 賠付項目
 type PayEntry struct {
-	Symbol                string           `json:"symbol"`
-	Count                 int              `json:"count"`
-	Odds                  int64            `json:"odds"`
+	Symbol                string           `json:"symbol"` // Symbol
+	Count                 int              `json:"count"`  // 個數
+	Odds                  int64            `json:"odds"`   // 賠率
 	ExpectedProbabilities map[Mode]float64 `json:"expectedProbabilities,omitempty"`
 	FreeSpins             int              `json:"freeSpins,omitempty"`
 }
@@ -111,8 +112,9 @@ func (p PayEntry) ExpectedProbabilityFor(mode Mode) float64 {
 	return 0
 }
 
+// 賠付表
 type Paytable struct {
-	Line    []PayEntry `json:"line"`
+	Line    []PayEntry `json:"line"` // 線獎
 	Way     []PayEntry `json:"way"`
 	Scatter []PayEntry `json:"scatter"`
 }

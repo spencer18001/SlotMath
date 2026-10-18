@@ -14,15 +14,11 @@ import (
 )
 
 type options struct {
-	GamePath  string
-	Spins     int
-	Seed      int64
-	Bet       int64
-	Pattern   string
-	Mode      string
-	LineIndex int
-	Expected  float64
-	Verbose   bool
+	GamePath string
+	Spins    int
+	Seed     int64
+	Bet      int64
+	Verbose  bool
 }
 
 func main() {
@@ -38,16 +34,6 @@ func main() {
 		fmt.Fprintf(os.Stderr, "slotmath: load game: %v\n", err)
 		os.Exit(1)
 	}
-	if opts.Pattern != "" {
-		result, err := simulator.RunPatternProbe(engine, opts.Spins, spin.Mode(opts.Mode), opts.LineIndex, opts.Pattern)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "slotmath: run pattern probe: %v\n", err)
-			os.Exit(1)
-		}
-		printPatternProbe(result, opts, time.Since(startedAt))
-		return
-	}
-
 	bet := opts.Bet
 	if bet == 0 {
 		bet = engine.DefaultBet().Total
@@ -68,10 +54,6 @@ func parseFlags() options {
 	flag.IntVar(&opts.Spins, "spins", 10000000, "number of spins to simulate")
 	flag.Int64Var(&opts.Seed, "seed", 0, "base random seed; 0 means random")
 	flag.Int64Var(&opts.Bet, "bet", 0, "total bet per spin; 0 activates all configured paylines")
-	flag.StringVar(&opts.Pattern, "pattern", "", `board pattern, for example "line.WK|WK|WK|WK|!WK"`)
-	flag.StringVar(&opts.Mode, "mode", string(spin.ModeBase), "reel mode for pattern probe: base or free")
-	flag.IntVar(&opts.LineIndex, "line", 0, "payline index for a line pattern")
-	flag.Float64Var(&opts.Expected, "expected", 0, "expected pattern probability; 0 disables z-score comparison")
 	flag.BoolVar(&opts.Verbose, "v", false, "show detailed verbose pay hit summaries")
 	flag.Parse()
 	return opts
@@ -87,33 +69,7 @@ func validateOptions(opts options) error {
 	if opts.Bet < 0 {
 		return fmt.Errorf("bet cannot be negative")
 	}
-	if opts.Mode != string(spin.ModeBase) && opts.Mode != string(spin.ModeFree) {
-		return fmt.Errorf("mode must be base or free")
-	}
-	if opts.LineIndex < 0 {
-		return fmt.Errorf("line index cannot be negative")
-	}
-	if opts.Expected < 0 || opts.Expected >= 1 {
-		return fmt.Errorf("expected probability must be in [0, 1)")
-	}
 	return nil
-}
-
-func printPatternProbe(result *simulator.PatternProbeResult, opts options, elapsed time.Duration) {
-	fmt.Println("SlotMath pattern probe")
-	fmt.Printf("Game: %s\n", opts.GamePath)
-	fmt.Printf("Mode: %s\n", result.Mode)
-	fmt.Printf("Type: %s\n", result.Pattern.Kind)
-	if result.Pattern.Kind == simulator.PatternLine {
-		fmt.Printf("Payline index: %d\n", result.LineIndex)
-		fmt.Printf("Payline: %v\n", result.Payline)
-	}
-	fmt.Printf("Pattern: %s\n", result.Pattern.Raw)
-	fmt.Printf("Spins: %d\n", result.Spins)
-	printSeed(opts.Seed)
-	fmt.Printf("Probability: %.8f\n", result.Probability)
-	printProbeComparison(result.Probability, opts.Expected, result.Spins)
-	fmt.Printf("Elapsed: %s\n", elapsed)
 }
 
 func printSummary(engine *spin.Engine, summary *simulator.Summary, opts options, elapsed time.Duration) {
@@ -246,17 +202,6 @@ func printPayHitSummary(summary simulator.ModeSummary) {
 			hit.ExpectedProbability, formatZScore(zScore, hasZScore),
 		)
 	}
-}
-
-func printProbeComparison(actual, expected float64, spins int) {
-	if expected == 0 {
-		fmt.Println("Expected: -")
-		fmt.Println("Z-score: -")
-		return
-	}
-	fmt.Printf("Expected: %.8f\n", expected)
-	zScore, ok := probabilityZScore(actual, expected, spins)
-	fmt.Printf("Z-score: %s\n", formatZScore(zScore, ok))
 }
 
 func ratio(numerator int64, denominator int64) float64 {

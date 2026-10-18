@@ -11,7 +11,7 @@ const maxCascadeSteps = 100
 type Engine struct {
 	info             Info
 	rng              *rand.Rand
-	generators       map[Mode]*generator
+	generators       map[Mode]*Generator
 	lineEvaluator    *lineEvaluator
 	wayEvaluator     *wayEvaluator
 	scatterEvaluator *scatterEvaluator
@@ -31,7 +31,7 @@ func newEngine(data loadedGame, seed int64) (*Engine, error) {
 	if err != nil {
 		return nil, err
 	}
-	generators := make(map[Mode]*generator, len(data.reels))
+	generators := make(map[Mode]*Generator, len(data.reels))
 	for mode, reels := range data.reels {
 		generator, err := newGenerator(reels, data.config.NumRows, drawMode)
 		if err != nil {
@@ -107,26 +107,26 @@ func (g *Engine) Spin(request Request) (Result, error) {
 	if err != nil {
 		return Result{}, err
 	}
-	drawn := generator.draw(g.rng)
+	drawResult := generator.draw(g.rng)
 	if !g.cascading {
-		return g.evaluateSingle(mode, drawn, bet)
+		return g.evaluateSingle(mode, drawResult, bet)
 	}
-	return g.evaluateCascading(mode, generator, drawn, bet)
+	return g.evaluateCascading(mode, generator, drawResult, bet)
 }
 
-func (g *Engine) evaluateSingle(mode Mode, drawn drawResult, bet Bet) (Result, error) {
-	eval, err := g.evaluateBoard(drawn.Board, bet)
+func (g *Engine) evaluateSingle(mode Mode, drawResult DrawResult, bet Bet) (Result, error) {
+	eval, err := g.evaluateBoard(drawResult.Board, bet)
 	if err != nil {
 		return Result{}, err
 	}
 	return Result{
-		Mode: mode, Stops: drawn.Stops, Board: drawn.Board, InitialBoard: drawn.Board.Clone(),
+		Mode: mode, Stops: drawResult.Stops, Board: drawResult.Board, InitialBoard: drawResult.Board.Clone(),
 		LineWins: eval.lineWins, WayWins: eval.wayWins, ScatterWins: eval.scatterWins,
 		TotalWin: eval.totalWin, FreeSpins: eval.freeSpins,
 	}, nil
 }
 
-func (g *Engine) evaluateCascading(mode Mode, generator *generator, drawn drawResult, bet Bet) (Result, error) {
+func (g *Engine) evaluateCascading(mode Mode, generator *Generator, drawn DrawResult, bet Bet) (Result, error) {
 	initialStops := append([]int(nil), drawn.Stops...)
 	stops := append([]int(nil), drawn.Stops...)
 	board := drawn.Board.Clone()
@@ -244,7 +244,7 @@ func maskEmpty(mask [][]bool) bool {
 	return true
 }
 
-func (g *Engine) generatorFor(mode Mode) (Mode, *generator, error) {
+func (g *Engine) generatorFor(mode Mode) (Mode, *Generator, error) {
 	if mode == "" {
 		mode = ModeBase
 	}

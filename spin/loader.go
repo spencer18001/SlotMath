@@ -11,7 +11,7 @@ type gameConfig struct {
 	GameID         string          `json:"gameId"`
 	Description    string          `json:"description"`
 	BetPerLine     int64           `json:"betPerLine"`
-	WayPayBet      int64           `json:"wayPayBet"`
+	WayPayBet      int64           `json:"wayPayBet,omitempty"`
 	DrawMode       string          `json:"drawMode,omitempty"`
 	Cascading      bool            `json:"cascading"`
 	NumReels       int             `json:"numReels"`

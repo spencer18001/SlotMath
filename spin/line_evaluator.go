@@ -6,16 +6,19 @@ type payKey struct {
 	symbol string
 	count  int
 }
+
 type payRule struct {
 	index     int
 	odds      int64
 	freeSpins int
 }
+
 type lineMatch struct {
 	baseSymbol       string
 	baseCount        int
 	leadingWildCount int
 }
+
 type lineResult struct {
 	wins []LineWin
 }
@@ -84,19 +87,24 @@ func analyzeLine(symbols []string, wilds map[string]bool) lineMatch {
 				leadingWildCount++
 				continue
 			}
+
 			baseSymbol = symbol
 			baseMatches++
 			continue
 		}
+
 		if symbol != baseSymbol && !wilds[symbol] {
 			break
 		}
+
 		baseMatches++
 	}
+
 	baseCount := 0
 	if baseSymbol != "" {
 		baseCount = leadingWildCount + baseMatches
 	}
+
 	return lineMatch{baseSymbol: baseSymbol, baseCount: baseCount, leadingWildCount: leadingWildCount}
 }
 
