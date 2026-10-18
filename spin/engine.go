@@ -73,7 +73,7 @@ func (g *Engine) ResolveBet(totalBet int64) (Bet, error) {
 		return Bet{}, fmt.Errorf("bet must be greater than zero")
 	}
 	if g.wayPayBet > 0 && totalBet%g.wayPayBet != 0 {
-		return Bet{}, fmt.Errorf("bet %d must be a multiple of wayPayBet %d", totalBet, g.wayPayBet)
+		return Bet{}, fmt.Errorf("bet %d must be a multiple of WayPayBet %d", totalBet, g.wayPayBet)
 	}
 	if len(g.paytable.Line) == 0 {
 		return Bet{Total: totalBet, PerLine: g.info.BetPerLine, ActiveLines: 0}, nil

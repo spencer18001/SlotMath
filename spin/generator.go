@@ -36,7 +36,7 @@ func parseDrawMode(value string) (DrawMode, error) {
 	case drawModeReelStrips, drawModeIndependentRows:
 		return mode, nil
 	default:
-		return "", fmt.Errorf("unsupported drawMode %q", value)
+		return "", fmt.Errorf("unsupported DrawMode %q", value)
 	}
 }
 
@@ -102,7 +102,7 @@ func (g *Generator) drawIndependentRows(rng *rand.Rand) DrawResult {
 
 func (g *Generator) tumble(board Board, stops []int, remove [][]bool) (Board, []int, []Position, error) {
 	if g.mode != drawModeReelStrips {
-		return nil, nil, nil, fmt.Errorf("cascading tumble requires drawMode %q", drawModeReelStrips)
+		return nil, nil, nil, fmt.Errorf("cascading tumble requires DrawMode %q", drawModeReelStrips)
 	}
 	if len(stops) != len(g.reels) {
 		return nil, nil, nil, fmt.Errorf("stops count %d does not match reels count %d", len(stops), len(g.reels))

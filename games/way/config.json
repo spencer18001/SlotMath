@@ -1,15 +1,15 @@
 {
-  "gameId": "way",
-  "description": "Way Game",
-  "betPerLine": 1,
-  "wayPayBet": 50,
-  "numReels": 5,
-  "numRows": 3,
-  "reelFiles": {
+  "GameID": "Way",
+  "Description": "Way Game",
+  "BetPerLine": 1,
+  "WayPayBet": 50,
+  "NumReels": 5,
+  "NumRows": 3,
+  "ReelFiles": {
     "base": "reels.csv"
   },
-  "paylinesFile": "paylines.json",
-  "paytableFile": "paytable.json",
-  "wildSymbols": ["W"],
-  "scatterSymbols": ["S"]
+  "PaylinesFile": "paylines.json",
+  "PaytableFile": "paytable.json",
+  "WildSymbols": ["W"],
+  "ScatterSymbols": ["S"]
 }

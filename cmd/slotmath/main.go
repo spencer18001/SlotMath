@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"math"
 	"os"
 	"path/filepath"
 	"time"
@@ -113,58 +112,7 @@ func printSummary(engine *spin.Engine, summary *simulator.Summary, opts options,
 			printPayHitSummary(modeSummary)
 		}
 	}
-	if summary.First != nil {
-		fmt.Printf("First stops: %v\n", summary.First.Stops)
-		fmt.Println("First board:")
-		for _, row := range summary.First.InitialBoard.Rows() {
-			fmt.Print("  ")
-			for index, symbol := range row {
-				if index > 0 {
-					fmt.Print(" | ")
-				}
-				fmt.Printf("%2s", symbol)
-			}
-			fmt.Println()
-		}
-		if len(summary.First.CascadeSteps) > 0 {
-			fmt.Println("First final board:")
-			for _, row := range summary.First.Board.Rows() {
-				fmt.Print("  ")
-				for index, symbol := range row {
-					if index > 0 {
-						fmt.Print(" | ")
-					}
-					fmt.Printf("%2s", symbol)
-				}
-				fmt.Println()
-			}
-			fmt.Printf("First cascade steps: %d\n", len(summary.First.CascadeSteps))
-		}
-		fmt.Printf("First win: %d\n", summary.First.TotalWin)
-		fmt.Printf("First free spins awarded: %d\n", summary.First.FreeSpins)
-		if len(summary.First.ScatterWins) > 0 {
-			fmt.Println("First scatter wins:")
-			for _, win := range summary.First.ScatterWins {
-				rule := paytable.Scatter[win.PayRuleIndex]
-				fmt.Printf("  %s x%d odds %d payout %d\n", rule.Symbol, rule.Count, rule.Odds, win.Payout)
-			}
-		}
-		if len(summary.First.LineWins) > 0 {
-			fmt.Println("First line wins:")
-			for _, win := range summary.First.LineWins {
-				rule := paytable.Line[win.PayRuleIndex]
-				fmt.Printf("  line %d: %-2s x%d odds %d payout %d\n", win.LineIndex, rule.Symbol, rule.Count, rule.Odds, win.Payout)
-			}
-		}
-		if len(summary.First.WayWins) > 0 {
-			fmt.Println("First way wins:")
-			for _, win := range summary.First.WayWins {
-				rule := paytable.Way[win.PayRuleIndex]
-				fmt.Printf("  %-2s x%d ways %d odds %d payout %d\n", rule.Symbol, win.Count, win.Ways, rule.Odds, win.Payout)
-			}
-		}
-	}
-	fmt.Printf("Elapsed: %s\n", elapsed)
+	fmt.Printf("Elapsed: %.1fs\n", elapsed.Seconds())
 }
 
 func printModeWinSummary(summary simulator.ModeSummary, betPerSpin int64, totalBet int64) {
@@ -188,18 +136,9 @@ func printPayHitSummary(summary simulator.ModeSummary) {
 	fmt.Printf("%s initial-board pay hit summary (line pays use payline 0):\n", summary.Mode)
 	for _, hit := range summary.PayHits {
 		probability := ratio(hit.Hits, int64(summary.Spins))
-		if hit.ExpectedProbability == 0 {
-			fmt.Printf(
-				"  %-7s %-2s x%d odds %-4d probability %.8f expected - z-score -\n",
-				hit.Kind, hit.Symbol, hit.Count, hit.Odds, probability,
-			)
-			continue
-		}
-		zScore, hasZScore := probabilityZScore(probability, hit.ExpectedProbability, summary.Spins)
 		fmt.Printf(
-			"  %-7s %-2s x%d odds %-4d probability %.8f expected %.8f z-score %s\n",
+			"  %-7s %-2s x%d odds %-4d probability %.8f\n",
 			hit.Kind, hit.Symbol, hit.Count, hit.Odds, probability,
-			hit.ExpectedProbability, formatZScore(zScore, hasZScore),
 		)
 	}
 }
@@ -216,24 +155,6 @@ func ratioInt(numerator int, denominator int) float64 {
 		return 0
 	}
 	return float64(numerator) / float64(denominator)
-}
-
-func probabilityZScore(actual, expected float64, spins int) (float64, bool) {
-	if spins <= 0 || expected <= 0 || expected >= 1 {
-		return 0, false
-	}
-	standardError := math.Sqrt(expected * (1 - expected) / float64(spins))
-	if standardError == 0 {
-		return 0, false
-	}
-	return (actual - expected) / standardError, true
-}
-
-func formatZScore(zScore float64, ok bool) string {
-	if !ok {
-		return "-"
-	}
-	return fmt.Sprintf("% .3f", zScore)
 }
 
 func printSeed(seed int64) {

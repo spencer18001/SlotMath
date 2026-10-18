@@ -1,22 +1,22 @@
 {
-  "line": [
-    { "symbol": "K", "count": 3, "odds": 5, "expectedProbabilities": { "base": 0.0032 } },
-    { "symbol": "K", "count": 4, "odds": 30, "expectedProbabilities": { "base": 0.00064 } },
-    { "symbol": "K", "count": 5, "odds": 100, "expectedProbabilities": { "base": 0.00016 } },
-    { "symbol": "Q", "count": 3, "odds": 5, "expectedProbabilities": { "base": 0.0048 } },
-    { "symbol": "Q", "count": 4, "odds": 25, "expectedProbabilities": { "base": 0.00096 } },
-    { "symbol": "Q", "count": 5, "odds": 100, "expectedProbabilities": { "base": 0.00024 } },
-    { "symbol": "J", "count": 3, "odds": 5, "expectedProbabilities": { "base": 0.01125 } },
-    { "symbol": "J", "count": 4, "odds": 20, "expectedProbabilities": { "base": 0.0028125 } },
-    { "symbol": "J", "count": 5, "odds": 75, "expectedProbabilities": { "base": 0.0009375 } },
-    { "symbol": "10", "count": 3, "odds": 5, "expectedProbabilities": { "base": 0.009375 } },
-    { "symbol": "10", "count": 4, "odds": 20, "expectedProbabilities": { "base": 0.00234375 } },
-    { "symbol": "10", "count": 5, "odds": 75, "expectedProbabilities": { "base": 0.00078125 } },
-    { "symbol": "9", "count": 3, "odds": 5, "expectedProbabilities": { "base": 0.0140625 } },
-    { "symbol": "9", "count": 4, "odds": 10, "expectedProbabilities": { "base": 0.00328125 } },
-    { "symbol": "9", "count": 5, "odds": 50, "expectedProbabilities": { "base": 0.00140625 } }
+  "Line": [
+    { "Symbol": "K", "Count": 3, "Odds": 5 },
+    { "Symbol": "K", "Count": 4, "Odds": 30 },
+    { "Symbol": "K", "Count": 5, "Odds": 100 },
+    { "Symbol": "Q", "Count": 3, "Odds": 5 },
+    { "Symbol": "Q", "Count": 4, "Odds": 25 },
+    { "Symbol": "Q", "Count": 5, "Odds": 100 },
+    { "Symbol": "J", "Count": 3, "Odds": 5 },
+    { "Symbol": "J", "Count": 4, "Odds": 20 },
+    { "Symbol": "J", "Count": 5, "Odds": 75 },
+    { "Symbol": "10", "Count": 3, "Odds": 5 },
+    { "Symbol": "10", "Count": 4, "Odds": 20 },
+    { "Symbol": "10", "Count": 5, "Odds": 75 },
+    { "Symbol": "9", "Count": 3, "Odds": 5 },
+    { "Symbol": "9", "Count": 4, "Odds": 10 },
+    { "Symbol": "9", "Count": 5, "Odds": 50 }
   ],
-  "scatter": [
-    { "symbol": "S", "count": 3, "odds": 50, "expectedProbabilities": { "base": 0.003375 } }
+  "Scatter": [
+    { "Symbol": "S", "Count": 3, "Odds": 50 }
   ]
 }

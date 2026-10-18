@@ -1,15 +1,15 @@
 {
-  "gameId": "independent",
-  "description": "Independent Reels 3x3 Sample",
-  "betPerLine": 1,
-  "drawMode": "independentRows",
-  "numReels": 3,
-  "numRows": 3,
-  "reelFiles": {
+  "GameID": "independent",
+  "Description": "Independent Reels 3x3 Sample",
+  "BetPerLine": 1,
+  "DrawMode": "independentRows",
+  "NumReels": 3,
+  "NumRows": 3,
+  "ReelFiles": {
     "base": "reels.csv"
   },
-  "paylinesFile": "paylines.json",
-  "paytableFile": "paytable.json",
-  "wildSymbols": ["W"],
-  "scatterSymbols": []
+  "PaylinesFile": "paylines.json",
+  "PaytableFile": "paytable.json",
+  "WildSymbols": ["W"],
+  "ScatterSymbols": []
 }

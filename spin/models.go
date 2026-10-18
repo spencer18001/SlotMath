@@ -99,25 +99,17 @@ type Result struct {
 
 // 賠付項目
 type PayEntry struct {
-	Symbol                string           `json:"symbol"` // Symbol
-	Count                 int              `json:"count"`  // 個數
-	Odds                  int64            `json:"odds"`   // 賠率
-	ExpectedProbabilities map[Mode]float64 `json:"expectedProbabilities,omitempty"`
-	FreeSpins             int              `json:"freeSpins,omitempty"`
-}
-
-func (p PayEntry) ExpectedProbabilityFor(mode Mode) float64 {
-	if expected, ok := p.ExpectedProbabilities[mode]; ok {
-		return expected
-	}
-	return 0
+	Symbol    string // Symbol
+	Count     int    // 個數
+	Odds      int64  // 賠率
+	FreeSpins int
 }
 
 // 賠付表
 type Paytable struct {
-	Line    []PayEntry `json:"line"` // 線獎
-	Way     []PayEntry `json:"way"`
-	Scatter []PayEntry `json:"scatter"`
+	Line    []PayEntry // 線獎
+	Way     []PayEntry
+	Scatter []PayEntry
 }
 
 type Info struct {

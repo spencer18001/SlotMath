@@ -1,15 +1,15 @@
 {
-  "gameId": "fg",
-  "description": "Free Game Sample",
-  "betPerLine": 1,
-  "numReels": 5,
-  "numRows": 3,
-  "reelFiles": {
+  "GameID": "fg",
+  "Description": "Free Game Sample",
+  "BetPerLine": 1,
+  "NumReels": 5,
+  "NumRows": 3,
+  "ReelFiles": {
     "base": "reels_base.csv",
     "free": "reels_free.csv"
   },
-  "paylinesFile": "paylines.json",
-  "paytableFile": "paytable.json",
-  "wildSymbols": ["W"],
-  "scatterSymbols": ["S"]
+  "PaylinesFile": "paylines.json",
+  "PaytableFile": "paytable.json",
+  "WildSymbols": ["W"],
+  "ScatterSymbols": ["S"]
 }

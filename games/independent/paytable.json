@@ -1,9 +1,9 @@
 {
-  "line": [
-    { "symbol": "A", "count": 3, "odds": 50, "expectedProbabilities": { "base": 0.00225 } },
-    { "symbol": "K", "count": 3, "odds": 40, "expectedProbabilities": { "base": 0.0075 } },
-    { "symbol": "Q", "count": 3, "odds": 15, "expectedProbabilities": { "base": 0.018 } },
-    { "symbol": "J", "count": 3, "odds": 6, "expectedProbabilities": { "base": 0.036 } },
-    { "symbol": "10", "count": 3, "odds": 2, "expectedProbabilities": { "base": 0.035 } }
+  "Line": [
+    { "Symbol": "A", "Count": 3, "Odds": 50 },
+    { "Symbol": "K", "Count": 3, "Odds": 40 },
+    { "Symbol": "Q", "Count": 3, "Odds": 15 },
+    { "Symbol": "J", "Count": 3, "Odds": 6 },
+    { "Symbol": "10", "Count": 3, "Odds": 2 }
   ]
 }

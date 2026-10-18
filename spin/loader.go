@@ -8,19 +8,19 @@ import (
 )
 
 type gameConfig struct {
-	GameID         string          `json:"gameId"`
-	Description    string          `json:"description"`
-	BetPerLine     int64           `json:"betPerLine"`
-	WayPayBet      int64           `json:"wayPayBet,omitempty"`
-	DrawMode       string          `json:"drawMode,omitempty"`
-	Cascading      bool            `json:"cascading"`
-	NumReels       int             `json:"numReels"`
-	NumRows        int             `json:"numRows"`
-	ReelFiles      map[Mode]string `json:"reelFiles"`
-	PaylinesFile   string          `json:"paylinesFile"`
-	PaytableFile   string          `json:"paytableFile"`
-	WildSymbols    []string        `json:"wildSymbols"`
-	ScatterSymbols []string        `json:"scatterSymbols"`
+	GameID         string
+	Description    string
+	BetPerLine     int64
+	WayPayBet      int64
+	DrawMode       string
+	Cascading      bool
+	NumReels       int
+	NumRows        int
+	ReelFiles      map[Mode]string
+	PaylinesFile   string
+	PaytableFile   string
+	WildSymbols    []string
+	ScatterSymbols []string
 }
 
 type loadedGame struct {
@@ -85,23 +85,23 @@ func loadJSON(path string, target any) error {
 func validateGame(data loadedGame) error {
 	cfg := data.config
 	if cfg.GameID == "" {
-		return fmt.Errorf("config gameId is required")
+		return fmt.Errorf("config GameID is required")
 	}
 	if cfg.BetPerLine <= 0 {
-		return fmt.Errorf("betPerLine must be greater than zero")
+		return fmt.Errorf("BetPerLine must be greater than zero")
 	}
 	drawMode, err := parseDrawMode(cfg.DrawMode)
 	if err != nil {
 		return err
 	}
 	if cfg.Cascading && drawMode != drawModeReelStrips {
-		return fmt.Errorf("cascading requires drawMode %q", drawModeReelStrips)
+		return fmt.Errorf("Cascading requires DrawMode %q", drawModeReelStrips)
 	}
 	if cfg.NumReels <= 0 {
-		return fmt.Errorf("numReels must be greater than zero")
+		return fmt.Errorf("NumReels must be greater than zero")
 	}
 	if cfg.NumRows <= 0 {
-		return fmt.Errorf("numRows must be greater than zero")
+		return fmt.Errorf("NumRows must be greater than zero")
 	}
 	if len(data.reels) == 0 {
 		return fmt.Errorf("config reels is required")
@@ -114,11 +114,11 @@ func validateGame(data loadedGame) error {
 			return fmt.Errorf("unsupported reel mode %q", mode)
 		}
 		if len(reelSet) != cfg.NumReels {
-			return fmt.Errorf("%s reels count %d does not match numReels %d", mode, len(reelSet), cfg.NumReels)
+			return fmt.Errorf("%s reels count %d does not match NumReels %d", mode, len(reelSet), cfg.NumReels)
 		}
 		for reelIndex, reel := range reelSet {
 			if len(reel) < cfg.NumRows {
-				return fmt.Errorf("%s reel %d has %d stops, needs at least numRows %d", mode, reelIndex, len(reel), cfg.NumRows)
+				return fmt.Errorf("%s reel %d has %d stops, needs at least NumRows %d", mode, reelIndex, len(reel), cfg.NumRows)
 			}
 		}
 	}
@@ -137,18 +137,18 @@ func validateGame(data loadedGame) error {
 	}
 	for index, pay := range data.paytable.Line {
 		if pay.FreeSpins != 0 {
-			return fmt.Errorf("line pay %d cannot award freeSpins", index)
+			return fmt.Errorf("line pay %d cannot award FreeSpins", index)
 		}
 	}
 	if err := validatePayEntries("way", data.paytable.Way); err != nil {
 		return err
 	}
 	if len(data.paytable.Way) > 0 && cfg.WayPayBet <= 0 {
-		return fmt.Errorf("wayPayBet must be greater than zero when way pays are configured")
+		return fmt.Errorf("WayPayBet must be greater than zero when way pays are configured")
 	}
 	for index, pay := range data.paytable.Way {
 		if pay.FreeSpins != 0 {
-			return fmt.Errorf("way pay %d cannot award freeSpins", index)
+			return fmt.Errorf("way pay %d cannot award FreeSpins", index)
 		}
 	}
 	if err := validatePayEntries("scatter", data.paytable.Scatter); err != nil {
@@ -157,7 +157,7 @@ func validateGame(data loadedGame) error {
 	for _, pay := range data.paytable.Scatter {
 		if pay.FreeSpins > 0 {
 			if _, ok := data.reels[ModeFree]; !ok {
-				return fmt.Errorf("free reels are required when scatter pays award freeSpins")
+				return fmt.Errorf("free reels are required when scatter pays award FreeSpins")
 			}
 			break
 		}
@@ -176,16 +176,8 @@ func validatePayEntries(kind string, entries []PayEntry) error {
 		if pay.Odds < 0 {
 			return fmt.Errorf("%s pay %d odds cannot be negative", kind, index)
 		}
-		for mode, expected := range pay.ExpectedProbabilities {
-			if mode != ModeBase && mode != ModeFree {
-				return fmt.Errorf("%s pay %d has unsupported expected probability mode %q", kind, index, mode)
-			}
-			if expected < 0 {
-				return fmt.Errorf("%s pay %d %s expected probability cannot be negative", kind, index, mode)
-			}
-		}
 		if pay.FreeSpins < 0 {
-			return fmt.Errorf("%s pay %d freeSpins cannot be negative", kind, index)
+			return fmt.Errorf("%s pay %d FreeSpins cannot be negative", kind, index)
 		}
 	}
 	return nil

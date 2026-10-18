@@ -40,26 +40,26 @@ games/fg/
 
 ```json
 {
-  "gameId": "fg",
-  "description": "Free Game Sample",
-  "betPerLine": 1,
-  "numReels": 5,
-  "numRows": 3,
-  "reelFiles": {
+  "GameID": "fg",
+  "Description": "Free Game Sample",
+  "BetPerLine": 1,
+  "NumReels": 5,
+  "NumRows": 3,
+  "ReelFiles": {
     "base": "reels_base.csv",
     "free": "reels_free.csv"
   },
-  "paylinesFile": "paylines.json",
-  "paytableFile": "paytable.json",
-  "wildSymbols": ["W"],
-  "scatterSymbols": ["S"]
+  "PaylinesFile": "paylines.json",
+  "PaytableFile": "paytable.json",
+  "WildSymbols": ["W"],
+  "ScatterSymbols": ["S"]
 }
 ```
 
 Reel CSV columns may have different lengths. An empty trailing cell means that reel has no stop on that row.
 
-Set `cascading` to `true` for tumbling/cascading games. A spin still appears as one completed `Engine.Spin` result to callers, but internally it repeats evaluate -> remove winning positions -> refill from reel strips until no win remains. Cascade steps do not add bet; they are reported separately as `CascadeSteps`.
-`drawMode` controls how a visible board is drawn:
+Set `Cascading` to `true` for tumbling/cascading games. A spin still appears as one completed `Engine.Spin` result to callers, but internally it repeats evaluate -> remove winning positions -> refill from reel strips until no win remains. Cascade steps do not add bet; they are reported separately as `CascadeSteps`.
+`DrawMode` controls how a visible board is drawn:
 
 - Omitted or `reelStrips`: each reel draws one stop, then visible rows are consecutive symbols from that reel strip.
 - `independentRows`: each visible row independently draws one stop from that reel's strip. This models independent-reel samples where the same column uses one strip distribution, but every cell is sampled independently.
@@ -68,14 +68,10 @@ A scatter rule may award free spins. `spin.Result.FreeSpins` is the number newly
 
 ```json
 {
-  "symbol": "S",
-  "count": 3,
-  "odds": 2,
-  "freeSpins": 10,
-  "expectedProbabilities": {
-    "base": 0.024384375,
-    "free": 0.025063815789473684
-  }
+  "Symbol": "S",
+  "Count": 3,
+  "Odds": 2,
+  "FreeSpins": 10
 }
 ```
 
@@ -116,9 +112,9 @@ remaining = remaining - 1 + spinResult.FreeSpins
 
 ## Betting and RTP
 
-The configured `betPerLine` is the betting unit. Total bet activates the first `bet / betPerLine` paylines.
+The configured `BetPerLine` is the betting unit. Total bet activates the first `bet / BetPerLine` paylines.
 
-- Line wins pay `odds * betPerLine`.
+- Line wins pay `Odds * BetPerLine`.
 - Scatter wins pay `odds * totalBet`.
 - Free spins use the original round bet for payout calculation but do not increase the paid `TotalBet`.
 
@@ -127,7 +123,7 @@ Simulator reports are separated into `base` and `free`:
 - Mode RTP uses `mode spins * bet` as its denominator.
 - Free RTP contribution uses paid `TotalBet` as its denominator.
 - Overall RTP uses all base/free wins divided by paid `TotalBet`.
-- Pay-hit probability and z-score use the spin count and expected probability for that mode.
+- Pay-hit probability uses the spin count for that mode.
 - Line-pay hit summaries observe payline 0 only.
 
 ## Randomness

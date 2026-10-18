@@ -15,12 +15,11 @@ type Request struct {
 }
 
 type PayHitSummary struct {
-	Kind                string
-	Symbol              string
-	Count               int
-	Odds                int64
-	ExpectedProbability float64
-	Hits                int64
+	Kind   string
+	Symbol string
+	Count  int
+	Odds   int64
+	Hits   int64
 }
 
 type ModeSummary struct {
@@ -50,7 +49,6 @@ type Summary struct {
 	HitCount        int
 	CascadeHitCount int
 	Modes           []ModeSummary
-	First           *spin.Result
 	Status          string
 }
 
@@ -92,10 +90,6 @@ func observe(summary *Summary, linePayCount, wayPayCount int, result spin.Result
 	summary.GeneratedSpins++
 	if result.Mode == spin.ModeFree {
 		summary.FreeSpins++
-	}
-	if summary.First == nil {
-		first := result
-		summary.First = &first
 	}
 	if result.TotalWin > 0 {
 		summary.HitCount++
@@ -180,18 +174,17 @@ func initialModeSummaries(modes []spin.Mode, paytable spin.Paytable) []ModeSumma
 	summaries := make([]ModeSummary, 0, len(modes))
 	for _, mode := range modes {
 		summaries = append(summaries, ModeSummary{
-			Mode: mode, PayHits: initialPayHitSummaries(mode, paytable),
+			Mode: mode, PayHits: initialPayHitSummaries(paytable),
 		})
 	}
 	return summaries
 }
 
-func initialPayHitSummaries(mode spin.Mode, paytable spin.Paytable) []PayHitSummary {
+func initialPayHitSummaries(paytable spin.Paytable) []PayHitSummary {
 	var summaries []PayHitSummary
 	appendPay := func(kind string, pay spin.PayEntry) {
 		summaries = append(summaries, PayHitSummary{
 			Kind: kind, Symbol: pay.Symbol, Count: pay.Count, Odds: pay.Odds,
-			ExpectedProbability: pay.ExpectedProbabilityFor(mode),
 		})
 	}
 	for _, pay := range paytable.Line {
