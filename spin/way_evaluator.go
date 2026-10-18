@@ -5,16 +5,16 @@ type wayResult struct {
 }
 
 type wayEvaluator struct {
-	paytable map[payKey]payRule
+	paytable map[PayKey]PayRule
 	pays     []PayEntry
 	wilds    map[string]bool
 	payBet   int64
 }
 
 func newWayEvaluator(paytable Paytable, wildSymbols []string, payBet int64) *wayEvaluator {
-	wayPays := make(map[payKey]payRule)
+	wayPays := make(map[PayKey]PayRule)
 	for index, pay := range paytable.Way {
-		wayPays[payKey{symbol: pay.Symbol, count: pay.Count}] = payRule{index: index, odds: pay.Odds}
+		wayPays[PayKey{symbol: pay.Symbol, count: pay.Count}] = PayRule{index: index, odds: pay.Odds}
 	}
 	wilds := make(map[string]bool)
 	for _, symbol := range wildSymbols {
@@ -38,7 +38,7 @@ func (e *wayEvaluator) evaluate(b Board, totalBet int64) (wayResult, error) {
 		if count <= 0 || ways <= 0 {
 			continue
 		}
-		rule, ok := e.paytable[payKey{symbol: pay.Symbol, count: count}]
+		rule, ok := e.paytable[PayKey{symbol: pay.Symbol, count: count}]
 		if !ok || rule.odds <= 0 {
 			continue
 		}

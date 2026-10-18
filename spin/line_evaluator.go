@@ -2,38 +2,43 @@ package spin
 
 import "fmt"
 
-type payKey struct {
-	symbol string
-	count  int
+// 賠付表查找的 key
+type PayKey struct {
+	symbol string // symbol
+	count  int    // 數量
 }
 
-type payRule struct {
-	index     int
-	odds      int64
+// 賠付規則
+type PayRule struct {
+	index     int   // 賠付表的索引
+	odds      int64 // 賠率
 	freeSpins int
 }
 
-type lineMatch struct {
-	baseSymbol       string
-	baseCount        int
-	leadingWildCount int
+// 連線資訊
+type LineMatch struct {
+	baseSymbol            string
+	matchCount            int
+	leadingWildMatchCount int
 }
 
-type lineResult struct {
-	wins []LineWin
+// 線獎結果
+type LineResult struct {
+	wins []LineWin // 線獎列表
 }
 
-type lineEvaluator struct {
+// 線獎計算
+type LineEvaluator struct {
 	paylines      [][]int
-	paytable      map[payKey]payRule
+	paytable      map[PayKey]PayRule
 	wilds         map[string]bool
 	wildPaySymbol string
 }
 
-func newLineEvaluator(paylines [][]int, paytable Paytable, wildSymbols []string) *lineEvaluator {
-	linePays := make(map[payKey]payRule)
+func newLineEvaluator(paylines [][]int, paytable Paytable, wildSymbols []string) *LineEvaluator {
+	linePays := make(map[PayKey]PayRule)
 	for index, pay := range paytable.Line {
-		linePays[payKey{symbol: pay.Symbol, count: pay.Count}] = payRule{index: index, odds: pay.Odds}
+		linePays[PayKey{symbol: pay.Symbol, count: pay.Count}] = PayRule{index: index, odds: pay.Odds}
 	}
 	wilds := make(map[string]bool)
 	for _, symbol := range wildSymbols {
@@ -43,53 +48,120 @@ func newLineEvaluator(paylines [][]int, paytable Paytable, wildSymbols []string)
 	if len(wildSymbols) > 0 {
 		wildPaySymbol = wildSymbols[0]
 	}
-	return &lineEvaluator{paylines: paylines, paytable: linePays, wilds: wilds, wildPaySymbol: wildPaySymbol}
+	return &LineEvaluator{paylines: paylines, paytable: linePays, wilds: wilds, wildPaySymbol: wildPaySymbol}
 }
 
-func (e *lineEvaluator) evaluate(b Board, activeLines int, betPerLine int64) (lineResult, error) {
+// 計算所有線獎
+func (e *LineEvaluator) evaluate(b Board, activeLines int, betPerLine int64) (LineResult, error) {
 	if activeLines <= 0 || activeLines > len(e.paylines) {
-		return lineResult{}, fmt.Errorf("active lines %d is outside 1..%d", activeLines, len(e.paylines))
+		return LineResult{}, fmt.Errorf("active lines %d is outside 1..%d", activeLines, len(e.paylines))
 	}
-	if betPerLine <= 0 {
-		return lineResult{}, fmt.Errorf("bet per line must be greater than zero")
-	}
-	var result lineResult
+
+	var result LineResult
 	for lineIndex := 0; lineIndex < activeLines; lineIndex++ {
 		win, ok := e.evaluateLine(lineIndex, e.paylines[lineIndex], b, betPerLine)
 		if !ok {
 			continue
 		}
+
 		result.wins = append(result.wins, win)
 	}
 	return result, nil
 }
 
-func (e *lineEvaluator) evaluateLine(lineIndex int, payline []int, b Board, betPerLine int64) (LineWin, bool) {
+// 計算線獎
+func (e *LineEvaluator) evaluateLine(lineIndex int, payline []int, b Board, betPerLine int64) (LineWin, bool) {
 	match := analyzeLine(symbolsForPayline(b, payline), e.wilds)
-	baseRule, hasBaseRule := e.lookup(match.baseSymbol, match.baseCount)
-	wildRule, hasWildRule := e.lookup(e.wildPaySymbol, match.leadingWildCount)
-	if !hasBaseRule && !hasWildRule {
+	rule, count, ok := e.bestPay(match)
+	if !ok {
 		return LineWin{}, false
 	}
-	if hasWildRule && (!hasBaseRule || wildRule.odds > baseRule.odds) {
-		return buildLineWin(lineIndex, payline, wildRule, match.leadingWildCount, betPerLine), true
-	}
-	return buildLineWin(lineIndex, payline, baseRule, match.baseCount, betPerLine), true
+	return LineWin{
+		LineIndex:    lineIndex,
+		PayRuleIndex: rule.index,
+		Payout:       rule.odds * betPerLine,
+		Positions:    linePositions(payline, count),
+	}, true
 }
 
-func analyzeLine(symbols []string, wilds map[string]bool) lineMatch {
+// 由盤面取得線上的 symbol
+func symbolsForPayline(b Board, payline []int) []string {
+	symbols := make([]string, len(payline))
+	for reel, row := range payline {
+		symbols[reel] = b[reel][row]
+	}
+	return symbols
+}
+
+// 取得最好的賠付規則
+func (e *LineEvaluator) bestPay(match LineMatch) (PayRule, int, bool) {
+	if match.baseSymbol == "" {
+		return e.bestRuleForCount(match.matchCount)
+	}
+
+	baseRule, baseCount, hasBaseRule := e.bestRuleForSymbol(match.baseSymbol, match.matchCount)
+	wildRule, wildCount, hasWildRule := e.bestRuleForSymbol(e.wildPaySymbol, match.leadingWildMatchCount)
+	if !hasBaseRule && !hasWildRule {
+		return PayRule{}, 0, false
+	}
+	if hasWildRule && (!hasBaseRule || wildRule.odds > baseRule.odds) {
+		return wildRule, wildCount, true
+	}
+	return baseRule, baseCount, true
+}
+
+// 取得指定 symbol 在連線數內最好的賠付規則
+func (e *LineEvaluator) bestRuleForSymbol(symbol string, count int) (PayRule, int, bool) {
+	var best PayRule
+	bestCount := 0
+	found := false
+	for key, rule := range e.paytable {
+		if key.symbol != symbol || key.count > count {
+			continue
+		}
+
+		if !found || rule.odds > best.odds || (rule.odds == best.odds && rule.index < best.index) {
+			best = rule
+			bestCount = key.count
+			found = true
+		}
+	}
+	return best, bestCount, found
+}
+
+// 取得連線數內最好的賠付規則
+func (e *LineEvaluator) bestRuleForCount(count int) (PayRule, int, bool) {
+	var best PayRule
+	bestCount := 0
+	found := false
+	for key, rule := range e.paytable {
+		if key.count > count {
+			continue
+		}
+
+		if !found || rule.odds > best.odds || (rule.odds == best.odds && rule.index < best.index) {
+			best = rule
+			bestCount = key.count
+			found = true
+		}
+	}
+	return best, bestCount, found
+}
+
+// 分析連線資訊
+func analyzeLine(symbols []string, wilds map[string]bool) LineMatch {
 	baseSymbol := ""
-	baseMatches := 0
-	leadingWildCount := 0
+	baseMatchCount := 0
+	leadingWildMatchCount := 0
 	for _, symbol := range symbols {
 		if baseSymbol == "" {
 			if wilds[symbol] {
-				leadingWildCount++
+				leadingWildMatchCount++
 				continue
 			}
 
 			baseSymbol = symbol
-			baseMatches++
+			baseMatchCount++
 			continue
 		}
 
@@ -97,31 +169,13 @@ func analyzeLine(symbols []string, wilds map[string]bool) lineMatch {
 			break
 		}
 
-		baseMatches++
+		baseMatchCount++
 	}
 
-	baseCount := 0
-	if baseSymbol != "" {
-		baseCount = leadingWildCount + baseMatches
-	}
-
-	return lineMatch{baseSymbol: baseSymbol, baseCount: baseCount, leadingWildCount: leadingWildCount}
-}
-
-func (e *lineEvaluator) lookup(symbol string, count int) (payRule, bool) {
-	if symbol == "" || count <= 0 {
-		return payRule{}, false
-	}
-	rule, ok := e.paytable[payKey{symbol: symbol, count: count}]
-	return rule, ok && rule.odds > 0
-}
-
-func buildLineWin(lineIndex int, payline []int, rule payRule, count int, betPerLine int64) LineWin {
-	return LineWin{
-		LineIndex:    lineIndex,
-		PayRuleIndex: rule.index,
-		Payout:       rule.odds * betPerLine,
-		Positions:    linePositions(payline, count),
+	return LineMatch{
+		baseSymbol:            baseSymbol,
+		matchCount:            leadingWildMatchCount + baseMatchCount,
+		leadingWildMatchCount: leadingWildMatchCount,
 	}
 }
 
@@ -134,12 +188,4 @@ func linePositions(payline []int, count int) []Position {
 		positions = append(positions, Position{Reel: reel, Row: payline[reel]})
 	}
 	return positions
-}
-
-func symbolsForPayline(b Board, payline []int) []string {
-	symbols := make([]string, len(payline))
-	for reel, row := range payline {
-		symbols[reel] = b[reel][row]
-	}
-	return symbols
 }

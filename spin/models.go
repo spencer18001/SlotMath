@@ -51,10 +51,11 @@ func (b Board) Rows() [][]string {
 	return rows
 }
 
+// 線獎
 type LineWin struct {
-	LineIndex    int
-	PayRuleIndex int
-	Payout       int64
+	LineIndex    int   // 線索引
+	PayRuleIndex int   // 賠付規則索引
+	Payout       int64 // 賠付
 	Positions    []Position
 }
 

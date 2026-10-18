@@ -12,7 +12,7 @@ type Engine struct {
 	info             Info
 	rng              *rand.Rand
 	generators       map[Mode]*Generator
-	lineEvaluator    *lineEvaluator
+	lineEvaluator    *LineEvaluator
 	wayEvaluator     *wayEvaluator
 	scatterEvaluator *scatterEvaluator
 	paylines         [][]int
