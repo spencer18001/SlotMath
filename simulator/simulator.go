@@ -135,19 +135,19 @@ func observe(summary *Summary, linePayCount, wayPayCount int, result spin.Result
 func observePayHits(payHits []PayHitSummary, linePayCount, wayPayCount int, result spin.Result) {
 	lineWins, wayWins, scatterWins := initialPayWins(result)
 	for _, win := range lineWins {
-		if win.LineIndex == 0 && win.PayRuleIndex >= 0 && win.PayRuleIndex < linePayCount {
-			payHits[win.PayRuleIndex].Hits++
+		if win.LineIndex == 0 && win.PaytableEntryIndex >= 0 && win.PaytableEntryIndex < linePayCount {
+			payHits[win.PaytableEntryIndex].Hits++
 		}
 	}
 	for _, win := range wayWins {
-		index := linePayCount + win.PayRuleIndex
-		if win.PayRuleIndex >= 0 && index < linePayCount+wayPayCount && index < len(payHits) {
+		index := linePayCount + win.PaytableEntryIndex
+		if win.PaytableEntryIndex >= 0 && index < linePayCount+wayPayCount && index < len(payHits) {
 			payHits[index].Hits += win.Ways
 		}
 	}
 	for _, win := range scatterWins {
-		index := linePayCount + wayPayCount + win.PayRuleIndex
-		if win.PayRuleIndex >= 0 && index < len(payHits) {
+		index := linePayCount + wayPayCount + win.PaytableEntryIndex
+		if win.PaytableEntryIndex >= 0 && index < len(payHits) {
 			payHits[index].Hits++
 		}
 	}
@@ -182,7 +182,7 @@ func initialModeSummaries(modes []spin.Mode, paytable spin.Paytable) []ModeSumma
 
 func initialPayHitSummaries(paytable spin.Paytable) []PayHitSummary {
 	var summaries []PayHitSummary
-	appendPay := func(kind string, pay spin.PayEntry) {
+	appendPay := func(kind string, pay spin.PaytableEntry) {
 		summaries = append(summaries, PayHitSummary{
 			Kind: kind, Symbol: pay.Symbol, Count: pay.Count, Odds: pay.Odds,
 		})

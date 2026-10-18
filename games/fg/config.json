@@ -4,12 +4,6 @@
   "BetPerLine": 1,
   "NumReels": 5,
   "NumRows": 3,
-  "ReelFiles": {
-    "base": "reels_base.csv",
-    "free": "reels_free.csv"
-  },
-  "PaylinesFile": "paylines.json",
-  "PaytableFile": "paytable.json",
   "WildSymbols": ["W"],
   "ScatterSymbols": ["S"]
 }

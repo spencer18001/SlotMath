@@ -2,19 +2,6 @@ package spin
 
 import "fmt"
 
-// 賠付表查找的 key
-type PayKey struct {
-	symbol string // symbol
-	count  int    // 數量
-}
-
-// 賠付規則
-type PayRule struct {
-	index     int   // 賠付表的索引
-	odds      int64 // 賠率
-	freeSpins int
-}
-
 // 連線資訊
 type LineMatch struct {
 	baseSymbol            string
@@ -30,16 +17,12 @@ type LineResult struct {
 // 線獎計算
 type LineEvaluator struct {
 	paylines      [][]int
-	paytable      map[PayKey]PayRule
+	pays          []PaytableEntry
 	wilds         map[string]bool
 	wildPaySymbol string
 }
 
 func newLineEvaluator(paylines [][]int, paytable Paytable, wildSymbols []string) *LineEvaluator {
-	linePays := make(map[PayKey]PayRule)
-	for index, pay := range paytable.Line {
-		linePays[PayKey{symbol: pay.Symbol, count: pay.Count}] = PayRule{index: index, odds: pay.Odds}
-	}
 	wilds := make(map[string]bool)
 	for _, symbol := range wildSymbols {
 		wilds[symbol] = true
@@ -48,7 +31,7 @@ func newLineEvaluator(paylines [][]int, paytable Paytable, wildSymbols []string)
 	if len(wildSymbols) > 0 {
 		wildPaySymbol = wildSymbols[0]
 	}
-	return &LineEvaluator{paylines: paylines, paytable: linePays, wilds: wilds, wildPaySymbol: wildPaySymbol}
+	return &LineEvaluator{paylines: paylines, pays: paytable.Line, wilds: wilds, wildPaySymbol: wildPaySymbol}
 }
 
 // 計算所有線獎
@@ -72,15 +55,15 @@ func (e *LineEvaluator) evaluate(b Board, activeLines int, betPerLine int64) (Li
 // 計算線獎
 func (e *LineEvaluator) evaluateLine(lineIndex int, payline []int, b Board, betPerLine int64) (LineWin, bool) {
 	match := analyzeLine(symbolsForPayline(b, payline), e.wilds)
-	rule, count, ok := e.bestPay(match)
+	pay, ok := e.bestPay(match)
 	if !ok {
 		return LineWin{}, false
 	}
 	return LineWin{
-		LineIndex:    lineIndex,
-		PayRuleIndex: rule.index,
-		Payout:       rule.odds * betPerLine,
-		Positions:    linePositions(payline, count),
+		LineIndex:          lineIndex,
+		PaytableEntryIndex: pay.Index,
+		Payout:             pay.Odds * betPerLine,
+		Positions:          linePositions(payline, pay.Count),
 	}, true
 }
 
@@ -94,58 +77,54 @@ func symbolsForPayline(b Board, payline []int) []string {
 }
 
 // 取得最好的賠付規則
-func (e *LineEvaluator) bestPay(match LineMatch) (PayRule, int, bool) {
+func (e *LineEvaluator) bestPay(match LineMatch) (PaytableEntry, bool) {
 	if match.baseSymbol == "" {
 		return e.bestRuleForCount(match.matchCount)
 	}
 
-	baseRule, baseCount, hasBaseRule := e.bestRuleForSymbol(match.baseSymbol, match.matchCount)
-	wildRule, wildCount, hasWildRule := e.bestRuleForSymbol(e.wildPaySymbol, match.leadingWildMatchCount)
-	if !hasBaseRule && !hasWildRule {
-		return PayRule{}, 0, false
+	basePay, hasBasePay := e.bestRuleForSymbol(match.baseSymbol, match.matchCount)
+	wildPay, hasWildPay := e.bestRuleForSymbol(e.wildPaySymbol, match.leadingWildMatchCount)
+	if !hasBasePay && !hasWildPay {
+		return PaytableEntry{}, false
 	}
-	if hasWildRule && (!hasBaseRule || wildRule.odds > baseRule.odds) {
-		return wildRule, wildCount, true
+	if hasWildPay && (!hasBasePay || wildPay.Odds > basePay.Odds) {
+		return wildPay, true
 	}
-	return baseRule, baseCount, true
+	return basePay, true
 }
 
 // 取得指定 symbol 在連線數內最好的賠付規則
-func (e *LineEvaluator) bestRuleForSymbol(symbol string, count int) (PayRule, int, bool) {
-	var best PayRule
-	bestCount := 0
+func (e *LineEvaluator) bestRuleForSymbol(symbol string, count int) (PaytableEntry, bool) {
+	var best PaytableEntry
 	found := false
-	for key, rule := range e.paytable {
-		if key.symbol != symbol || key.count > count {
+	for _, pay := range e.pays {
+		if pay.Symbol != symbol || pay.Count > count {
 			continue
 		}
 
-		if !found || rule.odds > best.odds || (rule.odds == best.odds && rule.index < best.index) {
-			best = rule
-			bestCount = key.count
+		if !found || pay.Odds > best.Odds {
+			best = pay
 			found = true
 		}
 	}
-	return best, bestCount, found
+	return best, found
 }
 
 // 取得連線數內最好的賠付規則
-func (e *LineEvaluator) bestRuleForCount(count int) (PayRule, int, bool) {
-	var best PayRule
-	bestCount := 0
+func (e *LineEvaluator) bestRuleForCount(count int) (PaytableEntry, bool) {
+	var best PaytableEntry
 	found := false
-	for key, rule := range e.paytable {
-		if key.count > count {
+	for _, pay := range e.pays {
+		if pay.Count > count {
 			continue
 		}
 
-		if !found || rule.odds > best.odds || (rule.odds == best.odds && rule.index < best.index) {
-			best = rule
-			bestCount = key.count
+		if !found || pay.Odds > best.Odds {
+			best = pay
 			found = true
 		}
 	}
-	return best, bestCount, found
+	return best, found
 }
 
 // 分析連線資訊

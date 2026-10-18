@@ -30,13 +30,13 @@ A game folder contains its engine configuration, reel strips, paylines, and payt
 ```text
 games/fg/
 |-- config.json
-|-- reels_base.csv
+|-- reels.csv
 |-- reels_free.csv
 |-- paylines.json
 `-- paytable.json
 ```
 
-`config.json` maps each spin mode to its reel strip:
+Game files use fixed names: `reels.csv` contains the base-game reel strips, `paylines.json` contains paylines, and `paytable.json` contains the paytable. Add `reels_free.csv` when the game has free-game reel strips.
 
 ```json
 {
@@ -45,12 +45,6 @@ games/fg/
   "BetPerLine": 1,
   "NumReels": 5,
   "NumRows": 3,
-  "ReelFiles": {
-    "base": "reels_base.csv",
-    "free": "reels_free.csv"
-  },
-  "PaylinesFile": "paylines.json",
-  "PaytableFile": "paytable.json",
   "WildSymbols": ["W"],
   "ScatterSymbols": ["S"]
 }

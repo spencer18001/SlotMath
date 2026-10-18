@@ -5,11 +5,6 @@
   "WayPayBet": 50,
   "NumReels": 5,
   "NumRows": 3,
-  "ReelFiles": {
-    "base": "reels.csv"
-  },
-  "PaylinesFile": "paylines.json",
-  "PaytableFile": "paytable.json",
   "WildSymbols": ["W"],
   "ScatterSymbols": ["S"]
 }

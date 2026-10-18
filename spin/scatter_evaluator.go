@@ -8,9 +8,9 @@ type scatterResult struct {
 }
 
 type scatterEvaluator struct {
-	paytable map[PayKey]PayRule
-	symbols  map[string]bool
-	payBet   int64
+	pays    []PaytableEntry
+	symbols map[string]bool
+	payBet  int64
 }
 
 func newScatterEvaluator(scatterSymbols []string, paytable Paytable, payBet int64) *scatterEvaluator {
@@ -21,11 +21,7 @@ func newScatterEvaluator(scatterSymbols []string, paytable Paytable, payBet int6
 	for _, symbol := range scatterSymbols {
 		symbols[symbol] = true
 	}
-	scatterPays := make(map[PayKey]PayRule)
-	for index, pay := range paytable.Scatter {
-		scatterPays[PayKey{symbol: pay.Symbol, count: pay.Count}] = PayRule{index: index, odds: pay.Odds, freeSpins: pay.FreeSpins}
-	}
-	return &scatterEvaluator{paytable: scatterPays, symbols: symbols, payBet: payBet}
+	return &scatterEvaluator{pays: paytable.Scatter, symbols: symbols, payBet: payBet}
 }
 
 func (e *scatterEvaluator) evaluate(b Board, totalBet int64) (scatterResult, error) {
@@ -42,17 +38,17 @@ func (e *scatterEvaluator) evaluate(b Board, totalBet int64) (scatterResult, err
 	}
 	var result scatterResult
 	for symbol, positions := range positionsBySymbol {
-		rule, ok := e.paytable[PayKey{symbol: symbol, count: len(positions)}]
-		if !ok || (rule.odds <= 0 && rule.freeSpins <= 0) {
+		pay, ok := findPaytableEntry(e.pays, symbol, len(positions))
+		if !ok || (pay.Odds <= 0 && pay.FreeSpins <= 0) {
 			continue
 		}
 		win := ScatterWin{
-			PayRuleIndex: rule.index,
-			Payout:       rule.odds * totalBet / e.payBet,
-			Positions:    append([]Position(nil), positions...),
+			PaytableEntryIndex: pay.Index,
+			Payout:             pay.Odds * totalBet / e.payBet,
+			Positions:          append([]Position(nil), positions...),
 		}
 		result.wins = append(result.wins, win)
-		result.freeSpins += rule.freeSpins
+		result.freeSpins += pay.FreeSpins
 	}
 	return result, nil
 }

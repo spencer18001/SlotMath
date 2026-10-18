@@ -1,11 +1,33 @@
 package spin
 
+// 遊戲模式
 type Mode string
 
+var Modes = []Mode{
+	ModeBase,
+	ModeFree,
+}
+
 const (
-	ModeBase Mode = "base"
-	ModeFree Mode = "free"
+	ModeBase Mode = "base" // base game
+	ModeFree Mode = "free" // free game
 )
+
+// 賠付表
+type Paytable struct {
+	Line    []PaytableEntry // 線獎
+	Way     []PaytableEntry
+	Scatter []PaytableEntry
+}
+
+// 賠付表.項目
+type PaytableEntry struct {
+	Index     int    `json:"-"` // 索引
+	Symbol    string // Symbol
+	Count     int    // 個數
+	Odds      int64  // 賠率
+	FreeSpins int
+}
 
 type Request struct {
 	Bet  int64
@@ -53,24 +75,24 @@ func (b Board) Rows() [][]string {
 
 // 線獎
 type LineWin struct {
-	LineIndex    int   // 線索引
-	PayRuleIndex int   // 賠付規則索引
-	Payout       int64 // 賠付
-	Positions    []Position
+	LineIndex          int   // 線索引
+	PaytableEntryIndex int   // 賠付表.項目索引
+	Payout             int64 // 賠付
+	Positions          []Position
 }
 
 type ScatterWin struct {
-	PayRuleIndex int
-	Payout       int64
-	Positions    []Position
+	PaytableEntryIndex int // 賠付表.項目索引
+	Payout             int64
+	Positions          []Position
 }
 
 type WayWin struct {
-	PayRuleIndex int
-	Count        int
-	Ways         int64
-	Payout       int64
-	Positions    []Position
+	PaytableEntryIndex int // 賠付表.項目索引
+	Count              int
+	Ways               int64
+	Payout             int64
+	Positions          []Position
 }
 
 type CascadeStep struct {
@@ -95,21 +117,6 @@ type Result struct {
 	CascadeSteps []CascadeStep
 	TotalWin     int64
 	FreeSpins    int
-}
-
-// 賠付項目
-type PayEntry struct {
-	Symbol    string // Symbol
-	Count     int    // 個數
-	Odds      int64  // 賠率
-	FreeSpins int
-}
-
-// 賠付表
-type Paytable struct {
-	Line    []PayEntry // 線獎
-	Way     []PayEntry
-	Scatter []PayEntry
 }
 
 type Info struct {

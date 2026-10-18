@@ -22,26 +22,26 @@ type Engine struct {
 	cascading        bool
 }
 
-func newEngine(data loadedGame, seed int64) (*Engine, error) {
+func newEngine(gameSetting GameSetting, seed int64) (*Engine, error) {
 	actualSeed := seed
 	if actualSeed == 0 {
 		actualSeed = time.Now().UnixNano()
 	}
-	drawMode, err := parseDrawMode(data.config.DrawMode)
+	drawMode, err := parseDrawMode(gameSetting.baseSetting.DrawMode)
 	if err != nil {
 		return nil, err
 	}
-	generators := make(map[Mode]*Generator, len(data.reels))
-	for mode, reels := range data.reels {
-		generator, err := newGenerator(reels, data.config.NumRows, drawMode)
+	generators := make(map[Mode]*Generator, len(gameSetting.reels))
+	for mode, reels := range gameSetting.reels {
+		generator, err := newGenerator(reels, gameSetting.baseSetting.NumRows, drawMode)
 		if err != nil {
 			return nil, fmt.Errorf("create %s generator: %w", mode, err)
 		}
 		generators[mode] = generator
 	}
-	baseReels := data.reels[ModeBase]
+	baseReels := gameSetting.reels[ModeBase]
 	symbolSet := make(map[string]bool)
-	for _, reelSet := range data.reels {
+	for _, reelSet := range gameSetting.reels {
 		for _, reel := range reelSet {
 			for _, symbol := range reel {
 				symbolSet[symbol] = true
@@ -54,17 +54,17 @@ func newEngine(data loadedGame, seed int64) (*Engine, error) {
 	}
 	return &Engine{
 		info: Info{
-			GameID: data.config.GameID, Path: data.path, Seed: seed,
-			BetPerLine: data.config.BetPerLine, WayPayBet: data.config.WayPayBet,
-			DrawMode: string(drawMode), Cascading: data.config.Cascading,
-			ReelCount: len(baseReels), PaylineCount: len(data.paylines),
+			GameID: gameSetting.baseSetting.GameID, Path: gameSetting.path, Seed: seed,
+			BetPerLine: gameSetting.baseSetting.BetPerLine, WayPayBet: gameSetting.baseSetting.WayPayBet,
+			DrawMode: string(drawMode), Cascading: gameSetting.baseSetting.Cascading,
+			ReelCount: len(baseReels), PaylineCount: len(gameSetting.paylines),
 		},
 		rng: rand.New(rand.NewSource(actualSeed)), generators: generators,
-		lineEvaluator:    newLineEvaluator(data.paylines, data.paytable, data.config.WildSymbols),
-		wayEvaluator:     newWayEvaluator(data.paytable, data.config.WildSymbols, data.config.WayPayBet),
-		scatterEvaluator: newScatterEvaluator(data.config.ScatterSymbols, data.paytable, data.config.WayPayBet),
-		paylines:         data.paylines, paytable: data.paytable, symbols: symbols,
-		wayPayBet: data.config.WayPayBet, cascading: data.config.Cascading,
+		lineEvaluator:    newLineEvaluator(gameSetting.paylines, gameSetting.paytable, gameSetting.baseSetting.WildSymbols),
+		wayEvaluator:     newWayEvaluator(gameSetting.paytable, gameSetting.baseSetting.WildSymbols, gameSetting.baseSetting.WayPayBet),
+		scatterEvaluator: newScatterEvaluator(gameSetting.baseSetting.ScatterSymbols, gameSetting.paytable, gameSetting.baseSetting.WayPayBet),
+		paylines:         gameSetting.paylines, paytable: gameSetting.paytable, symbols: symbols,
+		wayPayBet: gameSetting.baseSetting.WayPayBet, cascading: gameSetting.baseSetting.Cascading,
 	}, nil
 }
 

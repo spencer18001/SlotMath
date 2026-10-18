@@ -97,9 +97,9 @@ func printSummary(engine *spin.Engine, summary *simulator.Summary, opts options,
 	for _, modeSummary := range summary.Modes {
 		printModeWinSummary(modeSummary, summary.Bet.Total, summary.TotalBet)
 	}
-	fmt.Printf("Overall line RTP: %.2f%%\n", ratio(summary.TotalLineWin, summary.TotalBet)*100)
-	fmt.Printf("Overall way RTP: %.2f%%\n", ratio(summary.TotalWayWin, summary.TotalBet)*100)
-	fmt.Printf("Overall scatter RTP: %.2f%%\n", ratio(summary.TotalScatterWin, summary.TotalBet)*100)
+	fmt.Printf("Total line RTP: %.2f%%\n", ratio(summary.TotalLineWin, summary.TotalBet)*100)
+	fmt.Printf("Total way RTP: %.2f%%\n", ratio(summary.TotalWayWin, summary.TotalBet)*100)
+	fmt.Printf("Total scatter RTP: %.2f%%\n", ratio(summary.TotalScatterWin, summary.TotalBet)*100)
 	fmt.Printf("Total RTP: %.2f%%\n", ratio(summary.TotalWin, summary.TotalBet)*100)
 	fmt.Printf("Hit count: %d\n", summary.HitCount)
 	if info.Cascading || summary.CascadeSteps > 0 {

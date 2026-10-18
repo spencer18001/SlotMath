@@ -31,6 +31,7 @@ func parseDrawMode(value string) (DrawMode, error) {
 	if value == "" {
 		return drawModeReelStrips, nil
 	}
+
 	mode := DrawMode(value)
 	switch mode {
 	case drawModeReelStrips, drawModeIndependentRows:
