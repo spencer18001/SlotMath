@@ -1,37 +1,9 @@
 package spin
 
-// 遊戲模式
-type Mode string
-
-var Modes = []Mode{
-	ModeBase,
-	ModeFree,
-}
-
-const (
-	ModeBase Mode = "base" // base game
-	ModeFree Mode = "free" // free game
-)
-
-// 賠付表
-type Paytable struct {
-	Line    []PaytableEntry // 線獎
-	Way     []PaytableEntry
-	Scatter []PaytableEntry
-}
-
-// 賠付表.項目
-type PaytableEntry struct {
-	Index     int    `json:"-"` // 索引
-	Symbol    string // Symbol
-	Count     int    // 個數
-	Odds      int64  // 賠率
-	FreeSpins int
-}
-
-type Request struct {
-	Bet  int64
-	Mode Mode
+// spin 的請求參數
+type SpinRequest struct {
+	Bet  int64 // 押注
+	Mode Mode  // 遊戲模式
 }
 
 type Bet struct {
@@ -106,7 +78,8 @@ type CascadeStep struct {
 	TotalWin         int64
 }
 
-type Result struct {
+// spin 的結果
+type SpinResult struct {
 	Mode         Mode
 	Stops        []int
 	Board        Board

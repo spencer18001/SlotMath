@@ -86,7 +86,7 @@ func (s *Simulator) Run(request Request) (*Summary, error) {
 	return summary, nil
 }
 
-func observe(summary *Summary, linePayCount, wayPayCount int, result spin.Result) {
+func observe(summary *Summary, linePayCount, wayPayCount int, result spin.SpinResult) {
 	summary.GeneratedSpins++
 	if result.Mode == spin.ModeFree {
 		summary.FreeSpins++
@@ -132,7 +132,7 @@ func observe(summary *Summary, linePayCount, wayPayCount int, result spin.Result
 	summary.TotalWin += result.TotalWin
 }
 
-func observePayHits(payHits []PayHitSummary, linePayCount, wayPayCount int, result spin.Result) {
+func observePayHits(payHits []PayHitSummary, linePayCount, wayPayCount int, result spin.SpinResult) {
 	lineWins, wayWins, scatterWins := initialPayWins(result)
 	for _, win := range lineWins {
 		if win.LineIndex == 0 && win.PaytableEntryIndex >= 0 && win.PaytableEntryIndex < linePayCount {
@@ -153,7 +153,7 @@ func observePayHits(payHits []PayHitSummary, linePayCount, wayPayCount int, resu
 	}
 }
 
-func initialPayWins(result spin.Result) ([]spin.LineWin, []spin.WayWin, []spin.ScatterWin) {
+func initialPayWins(result spin.SpinResult) ([]spin.LineWin, []spin.WayWin, []spin.ScatterWin) {
 	if len(result.CascadeSteps) == 0 {
 		return result.LineWins, result.WayWins, result.ScatterWins
 	}

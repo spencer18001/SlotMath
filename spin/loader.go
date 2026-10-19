@@ -10,27 +10,47 @@ import (
 	"strings"
 )
 
-// 遊戲設定
+// 遊戲模式
+type Mode string
+
+const (
+	ModeBase Mode = "base"
+	ModeFree Mode = "free"
+)
+
 type GameSetting struct {
-	path        string              // 基礎路徑
-	baseSetting GameBaseSetting     // 基礎設定
-	paylines    [][]int             // 線 ([line][reel] -> row index)
-	paytable    Paytable            // 賠付表
-	reels       map[Mode][][]string // 滾輪 ([mode][reel][stop] -> symbol)
+	path        string
+	baseSetting GameBaseSetting
+	paylines    [][]int // [line][reel] -> row index
+	paytable    Paytable
+	reels       map[Mode][][]string // [mode][reel][stop] -> symbol
 }
 
-// 遊戲基礎設定
 type GameBaseSetting struct {
-	GameID         string // 遊戲唯一碼
-	Description    string // 描述
-	BetPerLine     int64  // 押一條線要幾分
+	GameID         string
+	Description    string
+	BetPerLine     int64 // 押一條線要幾分 (可以由當次總押注算出押幾條線)
 	WayPayBet      int64
-	NumReels       int // 有幾軸
-	NumRows        int // 每軸有幾列
+	NumReels       int // 盤面有幾軸
+	NumRows        int // 盤面每軸有幾列
 	DrawMode       string
 	Cascading      bool
 	WildSymbols    []string
 	ScatterSymbols []string
+}
+
+type Paytable struct {
+	Line    []PaytableEntry
+	Way     []PaytableEntry
+	Scatter []PaytableEntry
+}
+
+type PaytableEntry struct {
+	Index     int `json:"-"`
+	Symbol    string
+	Count     int
+	Odds      int64
+	FreeSpins int
 }
 
 // 載入

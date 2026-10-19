@@ -68,74 +68,79 @@ func newEngine(gameSetting GameSetting, seed int64) (*Engine, error) {
 	}, nil
 }
 
-func (g *Engine) ResolveBet(totalBet int64) (Bet, error) {
+func (e *Engine) ResolveBet(totalBet int64) (Bet, error) {
 	if totalBet <= 0 {
 		return Bet{}, fmt.Errorf("bet must be greater than zero")
 	}
-	if g.wayPayBet > 0 && totalBet%g.wayPayBet != 0 {
-		return Bet{}, fmt.Errorf("bet %d must be a multiple of WayPayBet %d", totalBet, g.wayPayBet)
+	if e.wayPayBet > 0 && totalBet%e.wayPayBet != 0 {
+		return Bet{}, fmt.Errorf("bet %d must be a multiple of WayPayBet %d", totalBet, e.wayPayBet)
 	}
-	if len(g.paytable.Line) == 0 {
-		return Bet{Total: totalBet, PerLine: g.info.BetPerLine, ActiveLines: 0}, nil
+	if len(e.paytable.Line) == 0 {
+		return Bet{Total: totalBet, PerLine: e.info.BetPerLine, ActiveLines: 0}, nil
 	}
-	if totalBet%g.info.BetPerLine != 0 {
-		return Bet{}, fmt.Errorf("bet %d must be a multiple of bet per line %d", totalBet, g.info.BetPerLine)
+	if totalBet%e.info.BetPerLine != 0 {
+		return Bet{}, fmt.Errorf("bet %d must be a multiple of bet per line %d", totalBet, e.info.BetPerLine)
 	}
-	activeLines := int(totalBet / g.info.BetPerLine)
-	if activeLines > g.info.PaylineCount {
-		return Bet{}, fmt.Errorf("bet %d activates %d lines, maximum is %d", totalBet, activeLines, g.info.PaylineCount)
+	activeLines := int(totalBet / e.info.BetPerLine)
+	if activeLines > e.info.PaylineCount {
+		return Bet{}, fmt.Errorf("bet %d activates %d lines, maximum is %d", totalBet, activeLines, e.info.PaylineCount)
 	}
-	return Bet{Total: totalBet, PerLine: g.info.BetPerLine, ActiveLines: activeLines}, nil
+	return Bet{Total: totalBet, PerLine: e.info.BetPerLine, ActiveLines: activeLines}, nil
 }
 
-func (g *Engine) DefaultBet() Bet {
-	if len(g.paytable.Line) == 0 {
-		if len(g.paytable.Way) > 0 && g.wayPayBet > 0 {
-			return Bet{Total: g.wayPayBet, PerLine: g.info.BetPerLine, ActiveLines: 0}
+func (e *Engine) DefaultBet() Bet {
+	if len(e.paytable.Line) == 0 {
+		if len(e.paytable.Way) > 0 && e.wayPayBet > 0 {
+			return Bet{Total: e.wayPayBet, PerLine: e.info.BetPerLine, ActiveLines: 0}
 		}
-		return Bet{Total: g.info.BetPerLine, PerLine: g.info.BetPerLine, ActiveLines: 0}
+		return Bet{Total: e.info.BetPerLine, PerLine: e.info.BetPerLine, ActiveLines: 0}
 	}
-	return Bet{Total: g.info.BetPerLine * int64(g.info.PaylineCount), PerLine: g.info.BetPerLine, ActiveLines: g.info.PaylineCount}
+	return Bet{Total: e.info.BetPerLine * int64(e.info.PaylineCount), PerLine: e.info.BetPerLine, ActiveLines: e.info.PaylineCount}
 }
 
-func (g *Engine) Spin(request Request) (Result, error) {
-	bet, err := g.ResolveBet(request.Bet)
+// spin 操作
+func (e *Engine) Spin(request SpinRequest) (SpinResult, error) {
+	bet, err := e.ResolveBet(request.Bet)
 	if err != nil {
-		return Result{}, err
+		return SpinResult{}, err
 	}
-	mode, generator, err := g.generatorFor(request.Mode)
+
+	mode, generator, err := e.generatorFor(request.Mode)
 	if err != nil {
-		return Result{}, err
+		return SpinResult{}, err
 	}
-	drawResult := generator.draw(g.rng)
-	if !g.cascading {
-		return g.evaluateSingle(mode, drawResult, bet)
+
+	drawResult := generator.draw(e.rng)
+	if !e.cascading {
+		return e.evaluateSingle(mode, drawResult, bet)
 	}
-	return g.evaluateCascading(mode, generator, drawResult, bet)
+	return e.evaluateCascading(mode, generator, drawResult, bet)
 }
 
-func (g *Engine) evaluateSingle(mode Mode, drawResult DrawResult, bet Bet) (Result, error) {
-	eval, err := g.evaluateBoard(drawResult.Board, bet)
+// 評估單一盤面結果
+func (e *Engine) evaluateSingle(mode Mode, drawResult DrawResult, bet Bet) (SpinResult, error) {
+	eval, err := e.evaluateBoard(drawResult.Board, bet)
 	if err != nil {
-		return Result{}, err
+		return SpinResult{}, err
 	}
-	return Result{
+
+	return SpinResult{
 		Mode: mode, Stops: drawResult.Stops, Board: drawResult.Board, InitialBoard: drawResult.Board.Clone(),
 		LineWins: eval.lineWins, WayWins: eval.wayWins, ScatterWins: eval.scatterWins,
 		TotalWin: eval.totalWin, FreeSpins: eval.freeSpins,
 	}, nil
 }
 
-func (g *Engine) evaluateCascading(mode Mode, generator *Generator, drawn DrawResult, bet Bet) (Result, error) {
+func (e *Engine) evaluateCascading(mode Mode, generator *Generator, drawn DrawResult, bet Bet) (SpinResult, error) {
 	initialStops := append([]int(nil), drawn.Stops...)
 	stops := append([]int(nil), drawn.Stops...)
 	board := drawn.Board.Clone()
-	result := Result{Mode: mode, Stops: initialStops, InitialBoard: drawn.Board.Clone()}
+	result := SpinResult{Mode: mode, Stops: initialStops, InitialBoard: drawn.Board.Clone()}
 	for stepIndex := 0; stepIndex < maxCascadeSteps; stepIndex++ {
 		before := board.Clone()
-		eval, err := g.evaluateBoard(board, bet)
+		eval, err := e.evaluateBoard(board, bet)
 		if err != nil {
-			return Result{}, err
+			return SpinResult{}, err
 		}
 		result.LineWins = append(result.LineWins, eval.lineWins...)
 		result.WayWins = append(result.WayWins, eval.wayWins...)
@@ -149,7 +154,7 @@ func (g *Engine) evaluateCascading(mode Mode, generator *Generator, drawn DrawRe
 		}
 		after, nextStops, removed, err := generator.tumble(board, stops, remove)
 		if err != nil {
-			return Result{}, err
+			return SpinResult{}, err
 		}
 		result.CascadeSteps = append(result.CascadeSteps, CascadeStep{
 			Index: stepIndex, BoardBefore: before, BoardAfter: after.Clone(),
@@ -162,37 +167,43 @@ func (g *Engine) evaluateCascading(mode Mode, generator *Generator, drawn DrawRe
 		board = after
 		stops = nextStops
 	}
-	return Result{}, fmt.Errorf("cascade exceeded max steps %d", maxCascadeSteps)
+	return SpinResult{}, fmt.Errorf("cascade exceeded max steps %d", maxCascadeSteps)
 }
 
+// 盤面評估結果
 type boardEvaluation struct {
-	lineWins    []LineWin
+	lineWins    []LineWin // 線獎
 	wayWins     []WayWin
 	scatterWins []ScatterWin
 	totalWin    int64
 	freeSpins   int
 }
 
-func (g *Engine) evaluateBoard(board Board, bet Bet) (boardEvaluation, error) {
+// 評估盤面結果
+func (e *Engine) evaluateBoard(board Board, bet Bet) (boardEvaluation, error) {
 	var eval boardEvaluation
-	if len(g.paytable.Line) > 0 {
-		lineResult, err := g.lineEvaluator.evaluate(board, bet.ActiveLines, bet.PerLine)
+
+	if len(e.paytable.Line) > 0 {
+		lineResult, err := e.lineEvaluator.evaluate(board, bet.ActiveLines, bet.PerLine)
 		if err != nil {
 			return boardEvaluation{}, err
 		}
+
 		eval.lineWins = lineResult.wins
 	}
-	wayResult, err := g.wayEvaluator.evaluate(board, bet.Total)
+
+	wayResult, err := e.wayEvaluator.evaluate(board, bet.Total)
 	if err != nil {
 		return boardEvaluation{}, err
 	}
-	scatterResult, err := g.scatterEvaluator.evaluate(board, bet.Total)
+	scatterResult, err := e.scatterEvaluator.evaluate(board, bet.Total)
 	if err != nil {
 		return boardEvaluation{}, err
 	}
 	eval.wayWins = wayResult.wins
 	eval.scatterWins = scatterResult.wins
 	eval.freeSpins = scatterResult.freeSpins
+
 	for _, win := range eval.lineWins {
 		eval.totalWin += win.Payout
 	}
@@ -244,30 +255,30 @@ func maskEmpty(mask [][]bool) bool {
 	return true
 }
 
-func (g *Engine) generatorFor(mode Mode) (Mode, *Generator, error) {
+func (e *Engine) generatorFor(mode Mode) (Mode, *Generator, error) {
 	if mode == "" {
 		mode = ModeBase
 	}
-	generator, ok := g.generators[mode]
+	generator, ok := e.generators[mode]
 	if !ok {
 		return "", nil, fmt.Errorf("reels for mode %q are not configured", mode)
 	}
 	return mode, generator, nil
 }
 
-func (g *Engine) Info() Info         { return g.info }
-func (g *Engine) Paytable() Paytable { return g.paytable }
-func (g *Engine) Symbols() []string  { return append([]string(nil), g.symbols...) }
-func (g *Engine) Modes() []Mode {
+func (e *Engine) Info() Info         { return e.info }
+func (e *Engine) Paytable() Paytable { return e.paytable }
+func (e *Engine) Symbols() []string  { return append([]string(nil), e.symbols...) }
+func (e *Engine) Modes() []Mode {
 	modes := []Mode{ModeBase}
-	if _, ok := g.generators[ModeFree]; ok {
+	if _, ok := e.generators[ModeFree]; ok {
 		modes = append(modes, ModeFree)
 	}
 	return modes
 }
-func (g *Engine) Payline(index int) ([]int, bool) {
-	if index < 0 || index >= len(g.paylines) {
+func (e *Engine) Payline(index int) ([]int, bool) {
+	if index < 0 || index >= len(e.paylines) {
 		return nil, false
 	}
-	return g.paylines[index], true
+	return e.paylines[index], true
 }

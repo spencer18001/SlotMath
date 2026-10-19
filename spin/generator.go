@@ -13,17 +13,17 @@ const (
 	drawModeIndependentRows DrawMode = "independentRows" // 同一軸的不同列為獨立滾輪, 共用 reel strip, 但各自抽一個停輪位置
 )
 
-// 抽取盤面的結果
-type DrawResult struct {
-	Stops []int // 每個滾輪的停輪索引
-	Board Board // 盤面
-}
-
 // 盤面生成
 type Generator struct {
 	reels [][]string // 滾輪帶
 	rows  int        // 盤面的每一軸有幾列
 	mode  DrawMode   // 抽取盤面的模式
+}
+
+// 抽取盤面的結果
+type DrawResult struct {
+	Stops []int // 每個滾輪的停輪索引
+	Board Board // 盤面
 }
 
 // 解析 DrawMode
