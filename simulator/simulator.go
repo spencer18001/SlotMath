@@ -9,7 +9,7 @@ import (
 
 type Simulator struct{ flow *flow.Flow }
 
-type Request struct {
+type RunRequest struct {
 	Spins int
 	Bet   int64
 }
@@ -54,7 +54,7 @@ type Summary struct {
 
 func New(slotFlow *flow.Flow) *Simulator { return &Simulator{flow: slotFlow} }
 
-func (s *Simulator) Run(request Request) (*Summary, error) {
+func (s *Simulator) Run(request RunRequest) (*Summary, error) {
 	if request.Spins <= 0 {
 		return nil, fmt.Errorf("spins must be greater than zero")
 	}
@@ -75,12 +75,12 @@ func (s *Simulator) Run(request Request) (*Summary, error) {
 	for round := 0; round < request.Spins; round++ {
 		state := flow.State{Bet: bet.Total}
 		for !state.Completed {
-			step, err := s.flow.Next(state)
+			stepResult, err := s.flow.Next(state)
 			if err != nil {
 				return nil, err
 			}
-			state = step.State
-			observe(summary, len(paytable.Line), len(paytable.Way), step.Spin)
+			state = stepResult.State
+			observe(summary, len(paytable.Line), len(paytable.Way), stepResult.Spin)
 		}
 	}
 	return summary, nil

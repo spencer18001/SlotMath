@@ -39,7 +39,7 @@ func main() {
 	}
 	slotFlow := flow.New(engine)
 	sim := simulator.New(slotFlow)
-	summary, err := sim.Run(simulator.Request{Spins: opts.Spins, Bet: bet})
+	summary, err := sim.Run(simulator.RunRequest{Spins: opts.Spins, Bet: bet})
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "slotmath: run sims: %v\n", err)
 		os.Exit(1)

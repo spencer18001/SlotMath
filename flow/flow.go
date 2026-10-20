@@ -2,37 +2,35 @@ package flow
 
 import (
 	"errors"
+	"fmt"
 
 	"slotmath/spin"
 )
 
-// 通知此次 spin 已完成的錯誤
 var ErrRoundCompleted = errors.New("round is already completed")
 
 // spin 流程管理
 type Flow struct {
-	engine *spin.Engine // spin 引擎
+	engine *spin.Engine
 }
 
 type State struct {
-	Bet                int64     // 押注
-	Mode               spin.Mode // 遊戲模式
-	FreeSpinsRemaining int       // 剩下幾局 free game
-	Completed          bool      // 是否此次 spin 已完成
+	Bet                int64
+	Mode               spin.Mode
+	FreeSpinsRemaining int
+	Completed          bool
 }
 
-type Result struct {
+type StepResult struct {
 	State State
 	Spin  spin.SpinResult
 }
 
-// 生成 Flow
 func New(engine *spin.Engine) *Flow { return &Flow{engine: engine} }
 
-// 下一步
-func (f *Flow) Next(state State) (Result, error) {
+func (f *Flow) Next(state State) (StepResult, error) {
 	if state.Completed {
-		return Result{}, ErrRoundCompleted
+		return StepResult{}, ErrRoundCompleted
 	}
 
 	mode := state.Mode
@@ -40,27 +38,37 @@ func (f *Flow) Next(state State) (Result, error) {
 		mode = spin.ModeBase
 	}
 
+	switch mode {
+	case spin.ModeBase:
+		if state.FreeSpinsRemaining != 0 {
+			return StepResult{}, errors.New("base mode requires zero remaining free spins")
+		}
+	case spin.ModeFree:
+		if state.FreeSpinsRemaining <= 0 {
+			return StepResult{}, errors.New("free mode requires remaining free spins")
+		}
+	default:
+		return StepResult{}, fmt.Errorf("unsupported game mode %q", mode)
+	}
+
 	spinResult, err := f.engine.Spin(spin.SpinRequest{Bet: state.Bet, Mode: mode})
 	if err != nil {
-		return Result{}, err
+		return StepResult{}, err
 	}
+
 	remaining := state.FreeSpinsRemaining
-
 	if mode == spin.ModeFree {
-		if remaining <= 0 {
-			return Result{}, errors.New("free spin mode requires remaining free spins")
-		}
-
 		remaining--
 	}
 	remaining += spinResult.FreeSpins
+
 	nextMode := spin.ModeBase
-	completed := true
+	completed := remaining == 0
 	if remaining > 0 {
 		nextMode = spin.ModeFree
-		completed = false
 	}
-	return Result{State: State{
+
+	return StepResult{State: State{
 		Bet: state.Bet, Mode: nextMode, FreeSpinsRemaining: remaining, Completed: completed,
 	}, Spin: spinResult}, nil
 }
