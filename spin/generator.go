@@ -17,16 +17,15 @@ const (
 type Generator struct {
 	reels [][]string // 滾輪帶
 	rows  int        // 盤面的每一軸有幾列
-	mode  DrawMode   // 抽取盤面的模式
+	mode  DrawMode
 }
 
 // 抽取盤面的結果
 type DrawResult struct {
 	Stops []int // 每個滾輪的停輪索引
-	Board Board // 盤面
+	Board Board
 }
 
-// 解析 DrawMode
 func parseDrawMode(value string) (DrawMode, error) {
 	if value == "" {
 		return drawModeReelStrips, nil
@@ -41,7 +40,6 @@ func parseDrawMode(value string) (DrawMode, error) {
 	}
 }
 
-// 建立 Generator
 func newGenerator(reels [][]string, rows int, mode DrawMode) (*Generator, error) {
 	if rows <= 0 {
 		return nil, fmt.Errorf("rows must be greater than zero")
@@ -67,7 +65,6 @@ func (g *Generator) draw(rng *rand.Rand) DrawResult {
 	}
 }
 
-// 抽取盤面.ReelStrips
 func (g *Generator) drawReelStrips(rng *rand.Rand) DrawResult {
 	stops := make([]int, len(g.reels))
 	board := make(Board, len(g.reels))
@@ -84,7 +81,6 @@ func (g *Generator) drawReelStrips(rng *rand.Rand) DrawResult {
 	return DrawResult{Stops: stops, Board: board}
 }
 
-// 抽取盤面.IndependentRows
 func (g *Generator) drawIndependentRows(rng *rand.Rand) DrawResult {
 	stops := make([]int, len(g.reels)*g.rows)
 	board := make(Board, len(g.reels))

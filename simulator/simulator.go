@@ -58,12 +58,14 @@ func (s *Simulator) Run(request RunRequest) (*Summary, error) {
 	if request.Spins <= 0 {
 		return nil, fmt.Errorf("spins must be greater than zero")
 	}
+
 	engine := s.flow.Engine()
 	bet, err := engine.ResolveBet(request.Bet)
 	if err != nil {
 		return nil, err
 	}
 	paytable := engine.Paytable()
+
 	summary := &Summary{
 		Spins:    request.Spins,
 		Bet:      bet,
@@ -80,56 +82,57 @@ func (s *Simulator) Run(request RunRequest) (*Summary, error) {
 				return nil, err
 			}
 			state = stepResult.State
+
 			observe(summary, len(paytable.Line), len(paytable.Way), stepResult.Spin)
 		}
 	}
 	return summary, nil
 }
 
-func observe(summary *Summary, linePayCount, wayPayCount int, result spin.SpinResult) {
+func observe(summary *Summary, linePayCount, wayPayCount int, spinResult spin.SpinResult) {
 	summary.GeneratedSpins++
-	if result.Mode == spin.ModeFree {
+	if spinResult.Mode == spin.ModeFree {
 		summary.FreeSpins++
 	}
-	if result.TotalWin > 0 {
+	if spinResult.TotalWin > 0 {
 		summary.HitCount++
 	}
-	summary.CascadeSteps += len(result.CascadeSteps)
-	for _, step := range result.CascadeSteps {
+	summary.CascadeSteps += len(spinResult.CascadeSteps)
+	for _, step := range spinResult.CascadeSteps {
 		if step.TotalWin > 0 {
 			summary.CascadeHitCount++
 		}
 	}
-	modeSummary := modeSummaryFor(summary, result.Mode)
+	modeSummary := modeSummaryFor(summary, spinResult.Mode)
 	modeSummary.Spins++
-	modeSummary.CascadeSteps += len(result.CascadeSteps)
-	if result.TotalWin > 0 {
+	modeSummary.CascadeSteps += len(spinResult.CascadeSteps)
+	if spinResult.TotalWin > 0 {
 		modeSummary.HitCount++
 	}
-	for _, step := range result.CascadeSteps {
+	for _, step := range spinResult.CascadeSteps {
 		if step.TotalWin > 0 {
 			modeSummary.CascadeHitCount++
 		}
 	}
-	observePayHits(modeSummary.PayHits, linePayCount, wayPayCount, result)
+	observePayHits(modeSummary.PayHits, linePayCount, wayPayCount, spinResult)
 	var lineWin, wayWin, scatterWin int64
-	for _, win := range result.LineWins {
+	for _, win := range spinResult.LineWins {
 		lineWin += win.Payout
 	}
-	for _, win := range result.WayWins {
+	for _, win := range spinResult.WayWins {
 		wayWin += win.Payout
 	}
-	for _, win := range result.ScatterWins {
+	for _, win := range spinResult.ScatterWins {
 		scatterWin += win.Payout
 	}
 	modeSummary.TotalLineWin += lineWin
 	modeSummary.TotalWayWin += wayWin
 	modeSummary.TotalScatterWin += scatterWin
-	modeSummary.TotalWin += result.TotalWin
+	modeSummary.TotalWin += spinResult.TotalWin
 	summary.TotalLineWin += lineWin
 	summary.TotalWayWin += wayWin
 	summary.TotalScatterWin += scatterWin
-	summary.TotalWin += result.TotalWin
+	summary.TotalWin += spinResult.TotalWin
 }
 
 func observePayHits(payHits []PayHitSummary, linePayCount, wayPayCount int, result spin.SpinResult) {

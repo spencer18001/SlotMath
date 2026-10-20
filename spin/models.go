@@ -1,5 +1,17 @@
 package spin
 
+type GameInfo struct {
+	GameID       string
+	Path         string
+	Seed         int64
+	BetPerLine   int64
+	WayPayBet    int64
+	DrawMode     string
+	Cascading    bool
+	ReelCount    int
+	PaylineCount int
+}
+
 // spin 的請求參數
 type SpinRequest struct {
 	Bet  int64 // 押注
@@ -90,16 +102,4 @@ type SpinResult struct {
 	CascadeSteps []CascadeStep
 	TotalWin     int64
 	FreeSpins    int
-}
-
-type Info struct {
-	GameID       string
-	Path         string
-	Seed         int64
-	BetPerLine   int64
-	WayPayBet    int64
-	DrawMode     string
-	Cascading    bool
-	ReelCount    int
-	PaylineCount int
 }

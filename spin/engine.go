@@ -9,17 +9,14 @@ import (
 const maxCascadeSteps = 100
 
 type Engine struct {
-	info             Info
+	info             GameInfo
 	rng              *rand.Rand
+	paylines         [][]int
+	paytable         Paytable
 	generators       map[Mode]*Generator
 	lineEvaluator    *LineEvaluator
 	wayEvaluator     *wayEvaluator
 	scatterEvaluator *scatterEvaluator
-	paylines         [][]int
-	paytable         Paytable
-	symbols          []string
-	wayPayBet        int64
-	cascading        bool
 }
 
 func newEngine(gameSetting GameSetting, seed int64) (*Engine, error) {
@@ -27,44 +24,36 @@ func newEngine(gameSetting GameSetting, seed int64) (*Engine, error) {
 	if actualSeed == 0 {
 		actualSeed = time.Now().UnixNano()
 	}
+
 	drawMode, err := parseDrawMode(gameSetting.baseSetting.DrawMode)
 	if err != nil {
 		return nil, err
 	}
+
 	generators := make(map[Mode]*Generator, len(gameSetting.reels))
 	for mode, reels := range gameSetting.reels {
 		generator, err := newGenerator(reels, gameSetting.baseSetting.NumRows, drawMode)
 		if err != nil {
 			return nil, fmt.Errorf("create %s generator: %w", mode, err)
 		}
+
 		generators[mode] = generator
 	}
+
 	baseReels := gameSetting.reels[ModeBase]
-	symbolSet := make(map[string]bool)
-	for _, reelSet := range gameSetting.reels {
-		for _, reel := range reelSet {
-			for _, symbol := range reel {
-				symbolSet[symbol] = true
-			}
-		}
-	}
-	symbols := make([]string, 0, len(symbolSet))
-	for symbol := range symbolSet {
-		symbols = append(symbols, symbol)
-	}
+
 	return &Engine{
-		info: Info{
+		info: GameInfo{
 			GameID: gameSetting.baseSetting.GameID, Path: gameSetting.path, Seed: seed,
 			BetPerLine: gameSetting.baseSetting.BetPerLine, WayPayBet: gameSetting.baseSetting.WayPayBet,
 			DrawMode: string(drawMode), Cascading: gameSetting.baseSetting.Cascading,
 			ReelCount: len(baseReels), PaylineCount: len(gameSetting.paylines),
 		},
 		rng: rand.New(rand.NewSource(actualSeed)), generators: generators,
+		paylines: gameSetting.paylines, paytable: gameSetting.paytable,
 		lineEvaluator:    newLineEvaluator(gameSetting.paylines, gameSetting.paytable, gameSetting.baseSetting.WildSymbols),
 		wayEvaluator:     newWayEvaluator(gameSetting.paytable, gameSetting.baseSetting.WildSymbols, gameSetting.baseSetting.WayPayBet),
 		scatterEvaluator: newScatterEvaluator(gameSetting.baseSetting.ScatterSymbols, gameSetting.paytable, gameSetting.baseSetting.WayPayBet),
-		paylines:         gameSetting.paylines, paytable: gameSetting.paytable, symbols: symbols,
-		wayPayBet: gameSetting.baseSetting.WayPayBet, cascading: gameSetting.baseSetting.Cascading,
 	}, nil
 }
 
@@ -72,8 +61,8 @@ func (e *Engine) ResolveBet(totalBet int64) (Bet, error) {
 	if totalBet <= 0 {
 		return Bet{}, fmt.Errorf("bet must be greater than zero")
 	}
-	if e.wayPayBet > 0 && totalBet%e.wayPayBet != 0 {
-		return Bet{}, fmt.Errorf("bet %d must be a multiple of WayPayBet %d", totalBet, e.wayPayBet)
+	if e.info.WayPayBet > 0 && totalBet%e.info.WayPayBet != 0 {
+		return Bet{}, fmt.Errorf("bet %d must be a multiple of WayPayBet %d", totalBet, e.info.WayPayBet)
 	}
 	if len(e.paytable.Line) == 0 {
 		return Bet{Total: totalBet, PerLine: e.info.BetPerLine, ActiveLines: 0}, nil
@@ -90,15 +79,14 @@ func (e *Engine) ResolveBet(totalBet int64) (Bet, error) {
 
 func (e *Engine) DefaultBet() Bet {
 	if len(e.paytable.Line) == 0 {
-		if len(e.paytable.Way) > 0 && e.wayPayBet > 0 {
-			return Bet{Total: e.wayPayBet, PerLine: e.info.BetPerLine, ActiveLines: 0}
+		if len(e.paytable.Way) > 0 && e.info.WayPayBet > 0 {
+			return Bet{Total: e.info.WayPayBet, PerLine: e.info.BetPerLine, ActiveLines: 0}
 		}
 		return Bet{Total: e.info.BetPerLine, PerLine: e.info.BetPerLine, ActiveLines: 0}
 	}
 	return Bet{Total: e.info.BetPerLine * int64(e.info.PaylineCount), PerLine: e.info.BetPerLine, ActiveLines: e.info.PaylineCount}
 }
 
-// spin 操作
 func (e *Engine) Spin(request SpinRequest) (SpinResult, error) {
 	bet, err := e.ResolveBet(request.Bet)
 	if err != nil {
@@ -111,13 +99,12 @@ func (e *Engine) Spin(request SpinRequest) (SpinResult, error) {
 	}
 
 	drawResult := generator.draw(e.rng)
-	if !e.cascading {
+	if !e.info.Cascading {
 		return e.evaluateSingle(mode, drawResult, bet)
 	}
 	return e.evaluateCascading(mode, generator, drawResult, bet)
 }
 
-// 評估單一盤面結果
 func (e *Engine) evaluateSingle(mode Mode, drawResult DrawResult, bet Bet) (SpinResult, error) {
 	eval, err := e.evaluateBoard(drawResult.Board, bet)
 	if err != nil {
@@ -266,9 +253,8 @@ func (e *Engine) generatorFor(mode Mode) (Mode, *Generator, error) {
 	return mode, generator, nil
 }
 
-func (e *Engine) Info() Info         { return e.info }
+func (e *Engine) Info() GameInfo     { return e.info }
 func (e *Engine) Paytable() Paytable { return e.paytable }
-func (e *Engine) Symbols() []string  { return append([]string(nil), e.symbols...) }
 func (e *Engine) Modes() []Mode {
 	modes := []Mode{ModeBase}
 	if _, ok := e.generators[ModeFree]; ok {
