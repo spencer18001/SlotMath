@@ -140,6 +140,5 @@ Useful flags:
 -spins     number of paid base spins
 -seed      base random seed; 0 means random
 -bet       total bet per spin; 0 activates all configured paylines
--v         show detailed pay-hit summaries
 ```
 

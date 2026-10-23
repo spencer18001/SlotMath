@@ -17,7 +17,6 @@ type options struct {
 	Spins    int
 	Seed     int64
 	Bet      int64
-	Verbose  bool
 }
 
 func main() {
@@ -44,7 +43,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "slotmath: run sims: %v\n", err)
 		os.Exit(1)
 	}
-	printSummary(engine, summary, opts, time.Since(startedAt))
+	printSummary(engine, summary, time.Since(startedAt))
 }
 
 func parseFlags() options {
@@ -53,7 +52,6 @@ func parseFlags() options {
 	flag.IntVar(&opts.Spins, "spins", 10000000, "number of spins to simulate")
 	flag.Int64Var(&opts.Seed, "seed", 0, "base random seed; 0 means random")
 	flag.Int64Var(&opts.Bet, "bet", 0, "total bet per spin; 0 activates all configured paylines")
-	flag.BoolVar(&opts.Verbose, "v", false, "show detailed verbose pay hit summaries")
 	flag.Parse()
 	return opts
 }
@@ -71,7 +69,7 @@ func validateOptions(opts options) error {
 	return nil
 }
 
-func printSummary(engine *spin.Engine, summary *simulator.Summary, opts options, elapsed time.Duration) {
+func printSummary(engine *spin.Engine, summary *simulator.Summary, elapsed time.Duration) {
 	info := engine.Info()
 	paytable := engine.Paytable()
 	fmt.Printf("Game ID: %s\n", info.GameID)
@@ -84,7 +82,7 @@ func printSummary(engine *spin.Engine, summary *simulator.Summary, opts options,
 	fmt.Printf("Line pays: %d\n", len(paytable.Line))
 	fmt.Printf("Way pays: %d\n", len(paytable.Way))
 	fmt.Printf("Scatter pays: %d\n", len(paytable.Scatter))
-	fmt.Printf("Bet per line: %d\n", summary.Bet.PerLine)
+	fmt.Printf("Bet per line: %d\n", info.BetPerLine)
 	if info.WayPayBet > 0 {
 		fmt.Printf("Way pay bet: %d\n", info.WayPayBet)
 	}
@@ -104,13 +102,8 @@ func printSummary(engine *spin.Engine, summary *simulator.Summary, opts options,
 	fmt.Printf("Hit count: %d\n", summary.HitCount)
 	if info.Cascading || summary.CascadeSteps > 0 {
 		fmt.Printf("Cascade steps: %d\n", summary.CascadeSteps)
-		fmt.Printf("Average cascade steps per generated spin: %.4f\n", ratioInt(summary.CascadeSteps, summary.GeneratedSpins))
+		fmt.Printf("Average cascade steps per generated spin: %.4f\n", ratioInt(summary.CascadeSteps, summary.Spins+summary.FreeSpins))
 		fmt.Printf("Cascade hit count: %d\n", summary.CascadeHitCount)
-	}
-	if opts.Verbose {
-		for _, modeSummary := range summary.Modes {
-			printPayHitSummary(modeSummary)
-		}
 	}
 	fmt.Printf("Elapsed: %.1fs\n", elapsed.Seconds())
 }
@@ -126,20 +119,6 @@ func printModeWinSummary(summary simulator.ModeSummary, betPerSpin int64, totalB
 	}
 	if summary.Mode != spin.ModeBase {
 		fmt.Printf("%s RTP contribution: %.2f%%\n", summary.Mode, ratio(summary.TotalWin, totalBet)*100)
-	}
-}
-
-func printPayHitSummary(summary simulator.ModeSummary) {
-	if len(summary.PayHits) == 0 || summary.Spins == 0 {
-		return
-	}
-	fmt.Printf("%s initial-board pay hit summary (line pays use payline 0):\n", summary.Mode)
-	for _, hit := range summary.PayHits {
-		probability := ratio(hit.Hits, int64(summary.Spins))
-		fmt.Printf(
-			"  %-7s %-2s x%d odds %-4d probability %.8f\n",
-			hit.Kind, hit.Symbol, hit.Count, hit.Odds, probability,
-		)
 	}
 }
 

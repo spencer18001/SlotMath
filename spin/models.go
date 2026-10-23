@@ -1,26 +1,7 @@
 package spin
 
-type GameInfo struct {
-	GameID       string
-	Path         string
-	Seed         int64
-	BetPerLine   int64
-	WayPayBet    int64
-	DrawMode     string
-	Cascading    bool
-	ReelCount    int
-	PaylineCount int
-}
-
-// spin 的請求參數
-type SpinRequest struct {
-	Bet  int64 // 押注
-	Mode Mode  // 遊戲模式
-}
-
 type Bet struct {
 	Total       int64
-	PerLine     int64
 	ActiveLines int
 }
 
@@ -57,22 +38,21 @@ func (b Board) Rows() [][]string {
 	return rows
 }
 
-// 線獎
 type LineWin struct {
-	LineIndex          int   // 線索引
-	PaytableEntryIndex int   // 賠付表.項目索引
-	Payout             int64 // 賠付
+	LineIndex          int
+	PaytableEntryIndex int
+	Payout             int64
 	Positions          []Position
 }
 
 type ScatterWin struct {
-	PaytableEntryIndex int // 賠付表.項目索引
+	PaytableEntryIndex int
 	Payout             int64
 	Positions          []Position
 }
 
 type WayWin struct {
-	PaytableEntryIndex int // 賠付表.項目索引
+	PaytableEntryIndex int
 	Count              int
 	Ways               int64
 	Payout             int64
@@ -88,18 +68,4 @@ type CascadeStep struct {
 	WayWins          []WayWin
 	ScatterWins      []ScatterWin
 	TotalWin         int64
-}
-
-// spin 的結果
-type SpinResult struct {
-	Mode         Mode
-	Stops        []int
-	Board        Board
-	InitialBoard Board
-	LineWins     []LineWin
-	WayWins      []WayWin
-	ScatterWins  []ScatterWin
-	CascadeSteps []CascadeStep
-	TotalWin     int64
-	FreeSpins    int
 }

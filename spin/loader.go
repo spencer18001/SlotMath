@@ -21,7 +21,7 @@ const (
 type GameSetting struct {
 	path        string
 	baseSetting GameBaseSetting
-	paylines    [][]int // [line][reel] -> row index
+	paylines    [][]int // [line][reel] -> rowIndex
 	paytable    Paytable
 	reels       map[Mode][][]string // [mode][reel][stop] -> symbol
 }
@@ -53,7 +53,6 @@ type PaytableEntry struct {
 	FreeSpins int
 }
 
-// 載入
 func Load(gamePath string, seed int64) (*Engine, error) {
 	gameSetting, err := loadGameSetting(gamePath)
 	if err != nil {
@@ -62,7 +61,6 @@ func Load(gamePath string, seed int64) (*Engine, error) {
 	return newEngine(gameSetting, seed)
 }
 
-// 載入遊戲設定
 func loadGameSetting(gamePath string) (GameSetting, error) {
 	if gamePath == "" {
 		return GameSetting{}, fmt.Errorf("game path is required")
@@ -114,7 +112,6 @@ func setPaytableIndexes(paytable *Paytable) {
 	}
 }
 
-// 讀取 json 檔
 func loadJSON(path string, target any) error {
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -126,7 +123,6 @@ func loadJSON(path string, target any) error {
 	return nil
 }
 
-// 讀取滾輪 csv
 func loadReelsCSV(path string) ([][]string, error) {
 	file, err := os.Open(path)
 	if err != nil {
@@ -174,7 +170,6 @@ func loadReelsCSV(path string) ([][]string, error) {
 	return reels, nil
 }
 
-// 驗證遊戲設定
 func validateGameSetting(gameSetting GameSetting) error {
 	baseSetting := gameSetting.baseSetting
 	if baseSetting.GameID == "" {
@@ -261,7 +256,6 @@ func validateGameSetting(gameSetting GameSetting) error {
 	return nil
 }
 
-// 驗證賠付表.項目
 func validatePaytableEntries(kind string, entries []PaytableEntry) error {
 	for index, pay := range entries {
 		if pay.Symbol == "" {

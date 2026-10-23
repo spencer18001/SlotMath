@@ -2,24 +2,21 @@ package spin
 
 import "fmt"
 
-// 連線資訊
-type LineMatch struct {
-	baseSymbol            string
-	matchCount            int
-	leadingWildMatchCount int
-}
-
-// 線獎結果
-type LineResult struct {
-	wins []LineWin // 線獎列表
-}
-
-// 線獎計算
 type LineEvaluator struct {
 	paylines      [][]int
 	pays          []PaytableEntry
 	wilds         map[string]bool
 	wildPaySymbol string
+}
+
+type LineResult struct {
+	wins []LineWin
+}
+
+type LineMatch struct {
+	baseSymbol            string
+	matchCount            int // leadingWildMatchCount + baseMatchCount
+	leadingWildMatchCount int
 }
 
 func newLineEvaluator(paylines [][]int, paytable Paytable, wildSymbols []string) *LineEvaluator {
@@ -34,7 +31,6 @@ func newLineEvaluator(paylines [][]int, paytable Paytable, wildSymbols []string)
 	return &LineEvaluator{paylines: paylines, pays: paytable.Line, wilds: wilds, wildPaySymbol: wildPaySymbol}
 }
 
-// 計算所有線獎
 func (e *LineEvaluator) evaluate(b Board, activeLines int, betPerLine int64) (LineResult, error) {
 	if activeLines <= 0 || activeLines > len(e.paylines) {
 		return LineResult{}, fmt.Errorf("active lines %d is outside 1..%d", activeLines, len(e.paylines))
@@ -67,7 +63,6 @@ func (e *LineEvaluator) evaluateLine(lineIndex int, payline []int, b Board, betP
 	}, true
 }
 
-// 由盤面取得線上的 symbol
 func symbolsForPayline(b Board, payline []int) []string {
 	symbols := make([]string, len(payline))
 	for reel, row := range payline {
@@ -76,58 +71,6 @@ func symbolsForPayline(b Board, payline []int) []string {
 	return symbols
 }
 
-// 取得最好的賠付規則
-func (e *LineEvaluator) bestPay(match LineMatch) (PaytableEntry, bool) {
-	if match.baseSymbol == "" {
-		return e.bestRuleForCount(match.matchCount)
-	}
-
-	basePay, hasBasePay := e.bestRuleForSymbol(match.baseSymbol, match.matchCount)
-	wildPay, hasWildPay := e.bestRuleForSymbol(e.wildPaySymbol, match.leadingWildMatchCount)
-	if !hasBasePay && !hasWildPay {
-		return PaytableEntry{}, false
-	}
-	if hasWildPay && (!hasBasePay || wildPay.Odds > basePay.Odds) {
-		return wildPay, true
-	}
-	return basePay, true
-}
-
-// 取得指定 symbol 在連線數內最好的賠付規則
-func (e *LineEvaluator) bestRuleForSymbol(symbol string, count int) (PaytableEntry, bool) {
-	var best PaytableEntry
-	found := false
-	for _, pay := range e.pays {
-		if pay.Symbol != symbol || pay.Count > count {
-			continue
-		}
-
-		if !found || pay.Odds > best.Odds {
-			best = pay
-			found = true
-		}
-	}
-	return best, found
-}
-
-// 取得連線數內最好的賠付規則
-func (e *LineEvaluator) bestRuleForCount(count int) (PaytableEntry, bool) {
-	var best PaytableEntry
-	found := false
-	for _, pay := range e.pays {
-		if pay.Count > count {
-			continue
-		}
-
-		if !found || pay.Odds > best.Odds {
-			best = pay
-			found = true
-		}
-	}
-	return best, found
-}
-
-// 分析連線資訊
 func analyzeLine(symbols []string, wilds map[string]bool) LineMatch {
 	baseSymbol := ""
 	baseMatchCount := 0
@@ -156,6 +99,54 @@ func analyzeLine(symbols []string, wilds map[string]bool) LineMatch {
 		matchCount:            leadingWildMatchCount + baseMatchCount,
 		leadingWildMatchCount: leadingWildMatchCount,
 	}
+}
+
+func (e *LineEvaluator) bestPay(match LineMatch) (PaytableEntry, bool) {
+	if match.baseSymbol == "" {
+		return e.bestPayForCount(match.matchCount)
+	}
+
+	basePay, hasBasePay := e.bestPayForSymbol(match.baseSymbol, match.matchCount)
+	wildPay, hasWildPay := e.bestPayForSymbol(e.wildPaySymbol, match.leadingWildMatchCount)
+	if !hasBasePay && !hasWildPay {
+		return PaytableEntry{}, false
+	}
+	if hasWildPay && (!hasBasePay || wildPay.Odds > basePay.Odds) {
+		return wildPay, true
+	}
+	return basePay, true
+}
+
+func (e *LineEvaluator) bestPayForCount(count int) (PaytableEntry, bool) {
+	var best PaytableEntry
+	found := false
+	for _, pay := range e.pays {
+		if pay.Count > count {
+			continue
+		}
+
+		if !found || pay.Odds > best.Odds {
+			best = pay
+			found = true
+		}
+	}
+	return best, found
+}
+
+func (e *LineEvaluator) bestPayForSymbol(symbol string, count int) (PaytableEntry, bool) {
+	var best PaytableEntry
+	found := false
+	for _, pay := range e.pays {
+		if pay.Symbol != symbol || pay.Count > count {
+			continue
+		}
+
+		if !found || pay.Odds > best.Odds {
+			best = pay
+			found = true
+		}
+	}
+	return best, found
 }
 
 func linePositions(payline []int, count int) []Position {

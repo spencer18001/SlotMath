@@ -19,6 +19,44 @@ type Engine struct {
 	scatterEvaluator *scatterEvaluator
 }
 
+type GameInfo struct {
+	GameID       string
+	Path         string
+	Seed         int64
+	BetPerLine   int64
+	WayPayBet    int64
+	DrawMode     string
+	Cascading    bool
+	ReelCount    int
+	PaylineCount int
+}
+
+type SpinRequest struct {
+	Bet  int64
+	Mode Mode
+}
+
+type SpinResult struct {
+	Mode         Mode
+	Stops        []int
+	Board        Board
+	InitialBoard Board
+	LineWins     []LineWin
+	WayWins      []WayWin
+	ScatterWins  []ScatterWin
+	CascadeSteps []CascadeStep
+	TotalWin     int64
+	FreeSpins    int
+}
+
+type boardEvaluation struct {
+	lineWins    []LineWin
+	wayWins     []WayWin
+	scatterWins []ScatterWin
+	totalWin    int64
+	freeSpins   int
+}
+
 func newEngine(gameSetting GameSetting, seed int64) (*Engine, error) {
 	actualSeed := seed
 	if actualSeed == 0 {
@@ -65,7 +103,7 @@ func (e *Engine) ResolveBet(totalBet int64) (Bet, error) {
 		return Bet{}, fmt.Errorf("bet %d must be a multiple of WayPayBet %d", totalBet, e.info.WayPayBet)
 	}
 	if len(e.paytable.Line) == 0 {
-		return Bet{Total: totalBet, PerLine: e.info.BetPerLine, ActiveLines: 0}, nil
+		return Bet{Total: totalBet, ActiveLines: 0}, nil
 	}
 	if totalBet%e.info.BetPerLine != 0 {
 		return Bet{}, fmt.Errorf("bet %d must be a multiple of bet per line %d", totalBet, e.info.BetPerLine)
@@ -74,17 +112,17 @@ func (e *Engine) ResolveBet(totalBet int64) (Bet, error) {
 	if activeLines > e.info.PaylineCount {
 		return Bet{}, fmt.Errorf("bet %d activates %d lines, maximum is %d", totalBet, activeLines, e.info.PaylineCount)
 	}
-	return Bet{Total: totalBet, PerLine: e.info.BetPerLine, ActiveLines: activeLines}, nil
+	return Bet{Total: totalBet, ActiveLines: activeLines}, nil
 }
 
 func (e *Engine) DefaultBet() Bet {
 	if len(e.paytable.Line) == 0 {
 		if len(e.paytable.Way) > 0 && e.info.WayPayBet > 0 {
-			return Bet{Total: e.info.WayPayBet, PerLine: e.info.BetPerLine, ActiveLines: 0}
+			return Bet{Total: e.info.WayPayBet, ActiveLines: 0}
 		}
-		return Bet{Total: e.info.BetPerLine, PerLine: e.info.BetPerLine, ActiveLines: 0}
+		return Bet{Total: e.info.BetPerLine, ActiveLines: 0}
 	}
-	return Bet{Total: e.info.BetPerLine * int64(e.info.PaylineCount), PerLine: e.info.BetPerLine, ActiveLines: e.info.PaylineCount}
+	return Bet{Total: e.info.BetPerLine * int64(e.info.PaylineCount), ActiveLines: e.info.PaylineCount}
 }
 
 func (e *Engine) Spin(request SpinRequest) (SpinResult, error) {
@@ -103,6 +141,17 @@ func (e *Engine) Spin(request SpinRequest) (SpinResult, error) {
 		return e.evaluateSingle(mode, drawResult, bet)
 	}
 	return e.evaluateCascading(mode, generator, drawResult, bet)
+}
+
+func (e *Engine) generatorFor(mode Mode) (Mode, *Generator, error) {
+	if mode == "" {
+		mode = ModeBase
+	}
+	generator, ok := e.generators[mode]
+	if !ok {
+		return "", nil, fmt.Errorf("reels for mode %q are not configured", mode)
+	}
+	return mode, generator, nil
 }
 
 func (e *Engine) evaluateSingle(mode Mode, drawResult DrawResult, bet Bet) (SpinResult, error) {
@@ -157,21 +206,11 @@ func (e *Engine) evaluateCascading(mode Mode, generator *Generator, drawn DrawRe
 	return SpinResult{}, fmt.Errorf("cascade exceeded max steps %d", maxCascadeSteps)
 }
 
-// 盤面評估結果
-type boardEvaluation struct {
-	lineWins    []LineWin // 線獎
-	wayWins     []WayWin
-	scatterWins []ScatterWin
-	totalWin    int64
-	freeSpins   int
-}
-
-// 評估盤面結果
 func (e *Engine) evaluateBoard(board Board, bet Bet) (boardEvaluation, error) {
 	var eval boardEvaluation
 
 	if len(e.paytable.Line) > 0 {
-		lineResult, err := e.lineEvaluator.evaluate(board, bet.ActiveLines, bet.PerLine)
+		lineResult, err := e.lineEvaluator.evaluate(board, bet.ActiveLines, e.info.BetPerLine)
 		if err != nil {
 			return boardEvaluation{}, err
 		}
@@ -183,11 +222,12 @@ func (e *Engine) evaluateBoard(board Board, bet Bet) (boardEvaluation, error) {
 	if err != nil {
 		return boardEvaluation{}, err
 	}
+	eval.wayWins = wayResult.wins
+
 	scatterResult, err := e.scatterEvaluator.evaluate(board, bet.Total)
 	if err != nil {
 		return boardEvaluation{}, err
 	}
-	eval.wayWins = wayResult.wins
 	eval.scatterWins = scatterResult.wins
 	eval.freeSpins = scatterResult.freeSpins
 
@@ -240,17 +280,6 @@ func maskEmpty(mask [][]bool) bool {
 		}
 	}
 	return true
-}
-
-func (e *Engine) generatorFor(mode Mode) (Mode, *Generator, error) {
-	if mode == "" {
-		mode = ModeBase
-	}
-	generator, ok := e.generators[mode]
-	if !ok {
-		return "", nil, fmt.Errorf("reels for mode %q are not configured", mode)
-	}
-	return mode, generator, nil
 }
 
 func (e *Engine) Info() GameInfo     { return e.info }

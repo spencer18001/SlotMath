@@ -7,37 +7,17 @@ import (
 	"slotmath/spin"
 )
 
-type Simulator struct{ flow *flow.Flow }
+type Simulator struct {
+	flow *flow.Flow
+}
 
 type RunRequest struct {
 	Spins int
 	Bet   int64
 }
 
-type PayHitSummary struct {
-	Kind   string
-	Symbol string
-	Count  int
-	Odds   int64
-	Hits   int64
-}
-
-type ModeSummary struct {
-	Mode            spin.Mode
-	Spins           int
-	CascadeSteps    int
-	TotalLineWin    int64
-	TotalWayWin     int64
-	TotalScatterWin int64
-	TotalWin        int64
-	HitCount        int
-	CascadeHitCount int
-	PayHits         []PayHitSummary
-}
-
 type Summary struct {
 	Spins           int
-	GeneratedSpins  int
 	FreeSpins       int
 	CascadeSteps    int
 	Bet             spin.Bet
@@ -49,7 +29,16 @@ type Summary struct {
 	HitCount        int
 	CascadeHitCount int
 	Modes           []ModeSummary
-	Status          string
+}
+
+type ModeSummary struct {
+	Mode            spin.Mode
+	Spins           int
+	CascadeSteps    int
+	TotalLineWin    int64
+	TotalWayWin     int64
+	TotalScatterWin int64
+	TotalWin        int64
 }
 
 func New(slotFlow *flow.Flow) *Simulator { return &Simulator{flow: slotFlow} }
@@ -64,14 +53,11 @@ func (s *Simulator) Run(request RunRequest) (*Summary, error) {
 	if err != nil {
 		return nil, err
 	}
-	paytable := engine.Paytable()
-
 	summary := &Summary{
 		Spins:    request.Spins,
 		Bet:      bet,
 		TotalBet: int64(request.Spins) * bet.Total,
-		Modes:    initialModeSummaries(engine.Modes(), paytable),
-		Status:   "generated boards and evaluated active line/way/scatter pays",
+		Modes:    initialModeSummaries(engine.Modes()),
 	}
 
 	for round := 0; round < request.Spins; round++ {
@@ -83,14 +69,21 @@ func (s *Simulator) Run(request RunRequest) (*Summary, error) {
 			}
 			state = stepResult.State
 
-			observe(summary, len(paytable.Line), len(paytable.Way), stepResult.Spin)
+			observe(summary, stepResult.Spin)
 		}
 	}
 	return summary, nil
 }
 
-func observe(summary *Summary, linePayCount, wayPayCount int, spinResult spin.SpinResult) {
-	summary.GeneratedSpins++
+func initialModeSummaries(modes []spin.Mode) []ModeSummary {
+	summaries := make([]ModeSummary, 0, len(modes))
+	for _, mode := range modes {
+		summaries = append(summaries, ModeSummary{Mode: mode})
+	}
+	return summaries
+}
+
+func observe(summary *Summary, spinResult spin.SpinResult) {
 	if spinResult.Mode == spin.ModeFree {
 		summary.FreeSpins++
 	}
@@ -106,15 +99,6 @@ func observe(summary *Summary, linePayCount, wayPayCount int, spinResult spin.Sp
 	modeSummary := modeSummaryFor(summary, spinResult.Mode)
 	modeSummary.Spins++
 	modeSummary.CascadeSteps += len(spinResult.CascadeSteps)
-	if spinResult.TotalWin > 0 {
-		modeSummary.HitCount++
-	}
-	for _, step := range spinResult.CascadeSteps {
-		if step.TotalWin > 0 {
-			modeSummary.CascadeHitCount++
-		}
-	}
-	observePayHits(modeSummary.PayHits, linePayCount, wayPayCount, spinResult)
 	var lineWin, wayWin, scatterWin int64
 	for _, win := range spinResult.LineWins {
 		lineWin += win.Payout
@@ -135,35 +119,6 @@ func observe(summary *Summary, linePayCount, wayPayCount int, spinResult spin.Sp
 	summary.TotalWin += spinResult.TotalWin
 }
 
-func observePayHits(payHits []PayHitSummary, linePayCount, wayPayCount int, result spin.SpinResult) {
-	lineWins, wayWins, scatterWins := initialPayWins(result)
-	for _, win := range lineWins {
-		if win.LineIndex == 0 && win.PaytableEntryIndex >= 0 && win.PaytableEntryIndex < linePayCount {
-			payHits[win.PaytableEntryIndex].Hits++
-		}
-	}
-	for _, win := range wayWins {
-		index := linePayCount + win.PaytableEntryIndex
-		if win.PaytableEntryIndex >= 0 && index < linePayCount+wayPayCount && index < len(payHits) {
-			payHits[index].Hits += win.Ways
-		}
-	}
-	for _, win := range scatterWins {
-		index := linePayCount + wayPayCount + win.PaytableEntryIndex
-		if win.PaytableEntryIndex >= 0 && index < len(payHits) {
-			payHits[index].Hits++
-		}
-	}
-}
-
-func initialPayWins(result spin.SpinResult) ([]spin.LineWin, []spin.WayWin, []spin.ScatterWin) {
-	if len(result.CascadeSteps) == 0 {
-		return result.LineWins, result.WayWins, result.ScatterWins
-	}
-	first := result.CascadeSteps[0]
-	return first.LineWins, first.WayWins, first.ScatterWins
-}
-
 func modeSummaryFor(summary *Summary, mode spin.Mode) *ModeSummary {
 	for index := range summary.Modes {
 		if summary.Modes[index].Mode == mode {
@@ -171,33 +126,4 @@ func modeSummaryFor(summary *Summary, mode spin.Mode) *ModeSummary {
 		}
 	}
 	panic(fmt.Sprintf("simulator observed unconfigured mode %q", mode))
-}
-
-func initialModeSummaries(modes []spin.Mode, paytable spin.Paytable) []ModeSummary {
-	summaries := make([]ModeSummary, 0, len(modes))
-	for _, mode := range modes {
-		summaries = append(summaries, ModeSummary{
-			Mode: mode, PayHits: initialPayHitSummaries(paytable),
-		})
-	}
-	return summaries
-}
-
-func initialPayHitSummaries(paytable spin.Paytable) []PayHitSummary {
-	var summaries []PayHitSummary
-	appendPay := func(kind string, pay spin.PaytableEntry) {
-		summaries = append(summaries, PayHitSummary{
-			Kind: kind, Symbol: pay.Symbol, Count: pay.Count, Odds: pay.Odds,
-		})
-	}
-	for _, pay := range paytable.Line {
-		appendPay("line", pay)
-	}
-	for _, pay := range paytable.Way {
-		appendPay("way", pay)
-	}
-	for _, pay := range paytable.Scatter {
-		appendPay("scatter", pay)
-	}
-	return summaries
 }
