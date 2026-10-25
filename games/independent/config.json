@@ -5,6 +5,5 @@
   "NumReels": 3,
   "NumRows": 3,
   "DrawMode": "independentRows",
-  "WildSymbols": ["W"],
-  "ScatterSymbols": []
+  "WildSymbols": ["W"]
 }

@@ -5,6 +5,5 @@
   "Cascading": true,
   "NumReels": 5,
   "NumRows": 3,
-  "WildSymbols": ["W"],
-  "ScatterSymbols": ["S"]
+  "WildSymbols": ["W"]
 }

@@ -16,7 +16,7 @@ type Engine struct {
 	generators       map[Mode]*Generator
 	lineEvaluator    *LineEvaluator
 	wayEvaluator     *wayEvaluator
-	scatterEvaluator *scatterEvaluator
+	scatterEvaluator *ScatterEvaluator
 }
 
 type GameInfo struct {
@@ -91,7 +91,7 @@ func newEngine(gameSetting GameSetting, seed int64) (*Engine, error) {
 		paylines: gameSetting.paylines, paytable: gameSetting.paytable,
 		lineEvaluator:    newLineEvaluator(gameSetting.paylines, gameSetting.paytable, gameSetting.baseSetting.WildSymbols),
 		wayEvaluator:     newWayEvaluator(gameSetting.paytable, gameSetting.baseSetting.WildSymbols, gameSetting.baseSetting.WayPayBet),
-		scatterEvaluator: newScatterEvaluator(gameSetting.baseSetting.ScatterSymbols, gameSetting.paytable, gameSetting.baseSetting.WayPayBet),
+		scatterEvaluator: newScatterEvaluator(gameSetting.paytable),
 	}, nil
 }
 

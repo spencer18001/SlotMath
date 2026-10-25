@@ -27,16 +27,15 @@ type GameSetting struct {
 }
 
 type GameBaseSetting struct {
-	GameID         string
-	Description    string
-	BetPerLine     int64 // 押一條線要幾分 (可以由當次總押注算出押幾條線)
-	WayPayBet      int64
-	NumReels       int // 盤面有幾軸
-	NumRows        int // 盤面每軸有幾列
-	DrawMode       string
-	Cascading      bool
-	WildSymbols    []string
-	ScatterSymbols []string
+	GameID      string
+	Description string
+	BetPerLine  int64 // 押一條線要幾分 (可以由當次總押注算出押幾條線)
+	WayPayBet   int64
+	NumReels    int // 盤面有幾軸
+	NumRows     int // 盤面每軸有幾列
+	DrawMode    string
+	Cascading   bool
+	WildSymbols []string
 }
 
 type Paytable struct {

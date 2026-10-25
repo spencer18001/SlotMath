@@ -45,8 +45,7 @@ Game files use fixed names: `reels.csv` contains the base-game reel strips, `pay
   "BetPerLine": 1,
   "NumReels": 5,
   "NumRows": 3,
-  "WildSymbols": ["W"],
-  "ScatterSymbols": ["S"]
+  "WildSymbols": ["W"]
 }
 ```
 
