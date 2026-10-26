@@ -82,7 +82,9 @@ func printSummary(engine *spin.Engine, summary *simulator.Summary, elapsed time.
 	fmt.Printf("Line pays: %d\n", len(paytable.Line))
 	fmt.Printf("Way pays: %d\n", len(paytable.Way))
 	fmt.Printf("Scatter pays: %d\n", len(paytable.Scatter))
-	fmt.Printf("Bet per line: %d\n", info.BetPerLine)
+	if info.BetPerLine > 0 {
+		fmt.Printf("Bet per line: %d\n", info.BetPerLine)
+	}
 	if info.WayPayBet > 0 {
 		fmt.Printf("Way pay bet: %d\n", info.WayPayBet)
 	}

@@ -174,8 +174,11 @@ func validateGameSetting(gameSetting GameSetting) error {
 	if baseSetting.GameID == "" {
 		return fmt.Errorf("config GameID is required")
 	}
-	if baseSetting.BetPerLine <= 0 {
-		return fmt.Errorf("BetPerLine must be greater than zero")
+	if baseSetting.BetPerLine < 0 {
+		return fmt.Errorf("BetPerLine cannot be negative")
+	}
+	if len(gameSetting.paytable.Line) > 0 && baseSetting.BetPerLine == 0 {
+		return fmt.Errorf("BetPerLine must be greater than zero when line pays are configured")
 	}
 	drawMode, err := parseDrawMode(baseSetting.DrawMode)
 	if err != nil {

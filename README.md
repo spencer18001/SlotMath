@@ -105,7 +105,7 @@ remaining = remaining - 1 + spinResult.FreeSpins
 
 ## Betting and RTP
 
-The configured `BetPerLine` is the betting unit. Total bet activates the first `bet / BetPerLine` paylines.
+For games with line pays, `BetPerLine` must be greater than zero and is the betting unit. Total bet activates the first `bet / BetPerLine` paylines. Games without line pays may omit it or set it to zero.
 
 - Line wins pay `Odds * BetPerLine`.
 - Scatter wins pay `odds * totalBet`.

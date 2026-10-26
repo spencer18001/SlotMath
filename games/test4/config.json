@@ -1,0 +1,8 @@
+{
+  "GameID": "test4",
+  "Description": "Way_R1WithoutWild",
+  "WayPayBet": 50,
+  "NumReels": 5,
+  "NumRows": 3,
+  "WildSymbols": ["W"]
+}
