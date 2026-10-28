@@ -15,5 +15,8 @@
     { "Symbol": "9", "Count": 5, "Odds": 50 },
     { "Symbol": "9", "Count": 4, "Odds": 10 },
     { "Symbol": "9", "Count": 3, "Odds": 5 }
+  ],
+  "Scatter": [
+    { "Symbol": "S", "Count": 3, "Odds": 50 }
   ]
 }

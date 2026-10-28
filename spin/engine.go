@@ -15,7 +15,7 @@ type Engine struct {
 	paytable         Paytable
 	generators       map[Mode]*Generator
 	lineEvaluator    *LineEvaluator
-	wayEvaluator     *wayEvaluator
+	wayEvaluator     *WayEvaluator
 	scatterEvaluator *ScatterEvaluator
 }
 
