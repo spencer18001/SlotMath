@@ -6,6 +6,7 @@ type ScatterEvaluator struct {
 	pays      []PaytableEntry
 	symbols   []string
 	symbolSet map[string]bool
+	payBet    int64
 }
 
 type ScatterResult struct {
@@ -13,7 +14,7 @@ type ScatterResult struct {
 	freeSpins int
 }
 
-func newScatterEvaluator(paytable Paytable) *ScatterEvaluator {
+func newScatterEvaluator(paytable Paytable, payBet int64) *ScatterEvaluator {
 	var symbols []string
 	symbolSet := make(map[string]bool)
 	for _, pay := range paytable.Scatter {
@@ -24,7 +25,7 @@ func newScatterEvaluator(paytable Paytable) *ScatterEvaluator {
 		symbolSet[pay.Symbol] = true
 		symbols = append(symbols, pay.Symbol)
 	}
-	return &ScatterEvaluator{pays: paytable.Scatter, symbols: symbols, symbolSet: symbolSet}
+	return &ScatterEvaluator{pays: paytable.Scatter, symbols: symbols, symbolSet: symbolSet, payBet: payBet}
 }
 
 func (e *ScatterEvaluator) evaluate(b Board, totalBet int64) (ScatterResult, error) {
@@ -55,7 +56,7 @@ func (e *ScatterEvaluator) evaluate(b Board, totalBet int64) (ScatterResult, err
 
 		win := ScatterWin{
 			PaytableEntryIndex: pay.Index,
-			Payout:             pay.Odds * totalBet,
+			Payout:             pay.Odds * totalBet / e.payBet,
 			Positions:          positions,
 		}
 		result.wins = append(result.wins, win)

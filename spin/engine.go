@@ -79,6 +79,10 @@ func newEngine(gameSetting GameSetting, seed int64) (*Engine, error) {
 	}
 
 	baseReels := gameSetting.reels[ModeBase]
+	scatterPayBet := int64(1)
+	if len(gameSetting.paytable.Way) > 0 {
+		scatterPayBet = gameSetting.baseSetting.WayPayBet
+	}
 
 	return &Engine{
 		info: GameInfo{
@@ -91,7 +95,7 @@ func newEngine(gameSetting GameSetting, seed int64) (*Engine, error) {
 		paylines: gameSetting.paylines, paytable: gameSetting.paytable,
 		lineEvaluator:    newLineEvaluator(gameSetting.paylines, gameSetting.paytable, gameSetting.baseSetting.WildSymbols),
 		wayEvaluator:     newWayEvaluator(gameSetting.paytable, gameSetting.baseSetting.WildSymbols, gameSetting.baseSetting.WayPayBet),
-		scatterEvaluator: newScatterEvaluator(gameSetting.paytable),
+		scatterEvaluator: newScatterEvaluator(gameSetting.paytable, scatterPayBet),
 	}, nil
 }
 
