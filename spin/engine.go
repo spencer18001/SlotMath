@@ -37,16 +37,15 @@ type SpinRequest struct {
 }
 
 type SpinResult struct {
-	Mode         Mode
-	Stops        []int
-	Board        Board
-	InitialBoard Board
-	LineWins     []LineWin
-	WayWins      []WayWin
-	ScatterWins  []ScatterWin
-	CascadeSteps []CascadeStep
-	TotalWin     int64
-	FreeSpins    int
+	Mode         Mode          // 使用的 Reel Mode
+	Stops        []int         // 初始停輪位置
+	Board        Board         // 初始盤面
+	LineWins     []LineWin     // 初始盤面的 Line 獎項
+	WayWins      []WayWin      // 初始盤面的 Way 獎項
+	ScatterWins  []ScatterWin  // 初始盤面的 Scatter 獎項
+	CascadeSteps []CascadeStep // 每次 Tumble 後的盤面與計分結果
+	TotalWin     int64         // 初始盤面與所有 Cascade 的總得分
+	FreeSpins    int           // 初始盤面與所有 Cascade 觸發的 Free Spins 總數
 }
 
 type boardEvaluation struct {
@@ -165,49 +164,64 @@ func (e *Engine) evaluateSingle(mode Mode, drawResult DrawResult, bet Bet) (Spin
 	}
 
 	return SpinResult{
-		Mode: mode, Stops: drawResult.Stops, Board: drawResult.Board, InitialBoard: drawResult.Board.Clone(),
+		Mode: mode, Stops: drawResult.Stops, Board: drawResult.Board,
 		LineWins: eval.lineWins, WayWins: eval.wayWins, ScatterWins: eval.scatterWins,
 		TotalWin: eval.totalWin, FreeSpins: eval.freeSpins,
 	}, nil
 }
 
 func (e *Engine) evaluateCascading(mode Mode, generator *Generator, drawn DrawResult, bet Bet) (SpinResult, error) {
-	initialStops := append([]int(nil), drawn.Stops...)
-	stops := append([]int(nil), drawn.Stops...)
-	board := drawn.Board.Clone()
-	result := SpinResult{Mode: mode, Stops: initialStops, InitialBoard: drawn.Board.Clone()}
-	for stepIndex := 0; stepIndex < maxCascadeSteps; stepIndex++ {
-		before := board.Clone()
-		eval, err := e.evaluateBoard(board, bet)
-		if err != nil {
-			return SpinResult{}, err
+	initialEval, err := e.evaluateBoard(drawn.Board, bet)
+	if err != nil {
+		return SpinResult{}, err
+	}
+
+	result := SpinResult{
+		Mode:        mode,
+		Stops:       drawn.Stops,
+		Board:       drawn.Board,
+		LineWins:    initialEval.lineWins,
+		WayWins:     initialEval.wayWins,
+		ScatterWins: initialEval.scatterWins,
+		TotalWin:    initialEval.totalWin,
+		FreeSpins:   initialEval.freeSpins,
+	}
+
+	board := drawn.Board
+	stops := drawn.Stops
+	remove := removeMask(board, initialEval.lineWins, initialEval.wayWins, initialEval.scatterWins)
+	for stepIndex := 0; !maskEmpty(remove); stepIndex++ {
+		if stepIndex >= maxCascadeSteps {
+			return SpinResult{}, fmt.Errorf("cascade exceeded max steps %d", maxCascadeSteps)
 		}
-		result.LineWins = append(result.LineWins, eval.lineWins...)
-		result.WayWins = append(result.WayWins, eval.wayWins...)
-		result.ScatterWins = append(result.ScatterWins, eval.scatterWins...)
-		result.TotalWin += eval.totalWin
-		result.FreeSpins += eval.freeSpins
-		remove := removeMask(board, eval.lineWins, eval.wayWins, eval.scatterWins)
-		if maskEmpty(remove) {
-			result.Board = board.Clone()
-			return result, nil
-		}
+
 		after, nextStops, removed, err := generator.tumble(board, stops, remove)
 		if err != nil {
 			return SpinResult{}, err
 		}
+		eval, err := e.evaluateBoard(after, bet)
+		if err != nil {
+			return SpinResult{}, err
+		}
+
 		result.CascadeSteps = append(result.CascadeSteps, CascadeStep{
-			Index: stepIndex, BoardBefore: before, BoardAfter: after.Clone(),
+			Index:            stepIndex,
+			Board:            after,
 			RemovedPositions: removed,
-			LineWins:         append([]LineWin(nil), eval.lineWins...),
-			WayWins:          append([]WayWin(nil), eval.wayWins...),
-			ScatterWins:      append([]ScatterWin(nil), eval.scatterWins...),
+			LineWins:         eval.lineWins,
+			WayWins:          eval.wayWins,
+			ScatterWins:      eval.scatterWins,
 			TotalWin:         eval.totalWin,
+			FreeSpins:        eval.freeSpins,
 		})
+		result.TotalWin += eval.totalWin
+		result.FreeSpins += eval.freeSpins
+
 		board = after
 		stops = nextStops
+		remove = removeMask(board, eval.lineWins, eval.wayWins, eval.scatterWins)
 	}
-	return SpinResult{}, fmt.Errorf("cascade exceeded max steps %d", maxCascadeSteps)
+	return result, nil
 }
 
 func (e *Engine) evaluateBoard(board Board, bet Bet) (boardEvaluation, error) {
@@ -252,6 +266,7 @@ func removeMask(board Board, lineWins []LineWin, wayWins []WayWin, scatterWins [
 	for reel := range board {
 		mask[reel] = make([]bool, len(board[reel]))
 	}
+
 	mark := func(positions []Position) {
 		for _, position := range positions {
 			if position.Reel < 0 || position.Reel >= len(mask) {
@@ -294,10 +309,4 @@ func (e *Engine) Modes() []Mode {
 		modes = append(modes, ModeFree)
 	}
 	return modes
-}
-func (e *Engine) Payline(index int) ([]int, bool) {
-	if index < 0 || index >= len(e.paylines) {
-		return nil, false
-	}
-	return e.paylines[index], true
 }

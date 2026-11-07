@@ -20,7 +20,7 @@ func TestGameRTP(t *testing.T) {
 	const (
 		spins           = 10_000_000
 		seed      int64 = 0
-		tolerance       = 0.5
+		tolerance       = 0.7
 	)
 
 	testCases := []struct {

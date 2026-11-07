@@ -109,6 +109,17 @@ func observe(summary *Summary, spinResult spin.SpinResult) {
 	for _, win := range spinResult.ScatterWins {
 		scatterWin += win.Payout
 	}
+	for _, step := range spinResult.CascadeSteps {
+		for _, win := range step.LineWins {
+			lineWin += win.Payout
+		}
+		for _, win := range step.WayWins {
+			wayWin += win.Payout
+		}
+		for _, win := range step.ScatterWins {
+			scatterWin += win.Payout
+		}
+	}
 	modeSummary.TotalLineWin += lineWin
 	modeSummary.TotalWayWin += wayWin
 	modeSummary.TotalScatterWin += scatterWin

@@ -98,12 +98,13 @@ func (g *Generator) drawIndependentRows(rng *rand.Rand) DrawResult {
 }
 
 func (g *Generator) tumble(board Board, stops []int, remove [][]bool) (Board, []int, []Position, error) {
-	if g.mode != drawModeReelStrips {
+	if g.mode != drawModeReelStrips { // 目前只實作 Reel Strip 模式的 tumble
 		return nil, nil, nil, fmt.Errorf("cascading tumble requires DrawMode %q", drawModeReelStrips)
 	}
 	if len(stops) != len(g.reels) {
 		return nil, nil, nil, fmt.Errorf("stops count %d does not match reels count %d", len(stops), len(g.reels))
 	}
+
 	nextStops := append([]int(nil), stops...)
 	nextBoard := make(Board, len(board))
 	var removed []Position
@@ -114,6 +115,7 @@ func (g *Generator) tumble(board Board, stops []int, remove [][]bool) (Board, []
 		if len(remove) <= reelIndex || len(remove[reelIndex]) != g.rows {
 			return nil, nil, nil, fmt.Errorf("remove mask reel %d does not match row count %d", reelIndex, g.rows)
 		}
+
 		removeCount := 0
 		remaining := make([]string, 0, g.rows)
 		for rowIndex, symbol := range reel {
@@ -122,12 +124,15 @@ func (g *Generator) tumble(board Board, stops []int, remove [][]bool) (Board, []
 				removed = append(removed, Position{Reel: reelIndex, Row: rowIndex})
 				continue
 			}
+
 			remaining = append(remaining, symbol)
 		}
+
 		if removeCount == 0 {
 			nextBoard[reelIndex] = append([]string(nil), reel...)
 			continue
 		}
+
 		reelStrip := g.reels[reelIndex]
 		nextStop := mod(nextStops[reelIndex]-removeCount, len(reelStrip))
 		newReel := make([]string, 0, g.rows)
@@ -138,6 +143,7 @@ func (g *Generator) tumble(board Board, stops []int, remove [][]bool) (Board, []
 		if len(newReel) != g.rows {
 			return nil, nil, nil, fmt.Errorf("tumbled reel %d has %d rows, expected %d", reelIndex, len(newReel), g.rows)
 		}
+
 		nextStops[reelIndex] = nextStop
 		nextBoard[reelIndex] = newReel
 	}

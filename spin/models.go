@@ -60,12 +60,12 @@ type WayWin struct {
 }
 
 type CascadeStep struct {
-	Index            int
-	BoardBefore      Board
-	BoardAfter       Board
-	RemovedPositions []Position
-	LineWins         []LineWin
-	WayWins          []WayWin
-	ScatterWins      []ScatterWin
-	TotalWin         int64
+	Index            int          // Cascade 索引，第一個 Tumble 為 0
+	Board            Board        // Tumble 後的盤面
+	RemovedPositions []Position   // 為產生此盤面而從前一盤面移除的位置
+	LineWins         []LineWin    // 此盤面的 Line 獎項
+	WayWins          []WayWin     // 此盤面的 Way 獎項
+	ScatterWins      []ScatterWin // 此盤面的 Scatter 獎項
+	TotalWin         int64        // 此盤面的總得分
+	FreeSpins        int          // 此盤面觸發的 Free Spins 數量
 }
