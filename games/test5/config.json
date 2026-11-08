@@ -1,0 +1,9 @@
+{
+  "GameID": "test5",
+  "Description": "Independent",
+  "BetPerLine": 1,
+  "NumReels": 3,
+  "NumRows": 3,
+  "DrawMode": "independentRows",
+  "WildSymbols": ["W"]
+}
