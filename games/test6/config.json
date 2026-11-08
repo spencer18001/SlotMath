@@ -1,0 +1,9 @@
+{
+  "GameID": "test6",
+  "Description": "Cascading",
+  "BetPerLine": 1,
+  "Cascading": true,
+  "NumReels": 5,
+  "NumRows": 3,
+  "WildSymbols": ["W"]
+}

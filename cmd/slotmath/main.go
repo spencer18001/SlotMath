@@ -103,9 +103,7 @@ func printSummary(engine *spin.Engine, summary *simulator.Summary, elapsed time.
 	fmt.Printf("Total RTP: %.2f%%\n", ratio(summary.TotalWin, summary.TotalBet)*100)
 	fmt.Printf("Hit count: %d\n", summary.HitCount)
 	if info.Cascading || summary.CascadeSteps > 0 {
-		fmt.Printf("Cascade steps: %d\n", summary.CascadeSteps)
-		fmt.Printf("Average cascade steps per generated spin: %.4f\n", ratioInt(summary.CascadeSteps, summary.Spins+summary.FreeSpins))
-		fmt.Printf("Cascade hit count: %d\n", summary.CascadeHitCount)
+		fmt.Printf("Average cascade steps per spin: %.4f\n", ratioInt(summary.CascadeSteps, summary.Spins+summary.FreeSpins))
 	}
 	fmt.Printf("Elapsed: %.1fs\n", elapsed.Seconds())
 }

@@ -32,6 +32,7 @@ func TestGameRTP(t *testing.T) {
 		{game: "test2", bet: 1, expectedRTP: 163.09},
 		{game: "test3", bet: 1, expectedRTP: 104.76},
 		{game: "test4", bet: 50, expectedRTP: 134.15},
+		{game: "test6", bet: 1, expectedRTP: 173.10},
 	}
 
 	for _, testCase := range testCases {

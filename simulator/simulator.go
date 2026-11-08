@@ -27,7 +27,6 @@ type Summary struct {
 	TotalScatterWin int64
 	TotalWin        int64
 	HitCount        int
-	CascadeHitCount int
 	Modes           []ModeSummary
 }
 
@@ -91,11 +90,6 @@ func observe(summary *Summary, spinResult spin.SpinResult) {
 		summary.HitCount++
 	}
 	summary.CascadeSteps += len(spinResult.CascadeSteps)
-	for _, step := range spinResult.CascadeSteps {
-		if step.TotalWin > 0 {
-			summary.CascadeHitCount++
-		}
-	}
 	modeSummary := modeSummaryFor(summary, spinResult.Mode)
 	modeSummary.Spins++
 	modeSummary.CascadeSteps += len(spinResult.CascadeSteps)
