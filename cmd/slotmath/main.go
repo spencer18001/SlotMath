@@ -13,10 +13,11 @@ import (
 )
 
 type options struct {
-	GamePath string
-	Spins    int
-	Seed     int64
-	Bet      int64
+	GamePath  string
+	Spins     int
+	FreeSpins int
+	Seed      int64
+	Bet       int64
 }
 
 func main() {
@@ -38,7 +39,9 @@ func main() {
 	}
 	slotFlow := flow.New(engine)
 	sim := simulator.New(slotFlow)
-	summary, err := sim.Run(simulator.RunRequest{Spins: opts.Spins, Bet: bet})
+	summary, err := sim.Run(simulator.RunRequest{
+		Spins: opts.Spins, Bet: bet, FreeSpins: opts.FreeSpins,
+	})
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "slotmath: run sims: %v\n", err)
 		os.Exit(1)
@@ -50,6 +53,7 @@ func parseFlags() options {
 	var opts options
 	flag.StringVar(&opts.GamePath, "game", "line", "path to a game definition folder")
 	flag.IntVar(&opts.Spins, "spins", 10000000, "number of spins to simulate")
+	flag.IntVar(&opts.FreeSpins, "free-spins", 0, "initial free spins per simulation round")
 	flag.Int64Var(&opts.Seed, "seed", 0, "base random seed; 0 means random")
 	flag.Int64Var(&opts.Bet, "bet", 0, "total bet per spin; 0 activates all configured paylines")
 	flag.Parse()
@@ -62,6 +66,9 @@ func validateOptions(opts options) error {
 	}
 	if opts.Spins <= 0 {
 		return fmt.Errorf("spins must be greater than zero")
+	}
+	if opts.FreeSpins < 0 {
+		return fmt.Errorf("free spins cannot be negative")
 	}
 	if opts.Bet < 0 {
 		return fmt.Errorf("bet cannot be negative")
@@ -90,6 +97,9 @@ func printSummary(engine *spin.Engine, summary *simulator.Summary, elapsed time.
 	}
 	if info.Cascading {
 		fmt.Println("Cascading: true")
+	}
+	if info.StickyWild {
+		fmt.Println("StickyWild: true")
 	}
 	fmt.Printf("Active lines: %d\n", summary.Bet.ActiveLines)
 	fmt.Printf("Bet per spin: %d\n", summary.Bet.Total)

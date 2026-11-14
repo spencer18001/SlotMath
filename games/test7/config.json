@@ -1,0 +1,9 @@
+{
+  "GameID": "test7",
+  "Description": "StickyWild",
+  "BetPerLine": 1,
+  "NumReels": 5,
+  "NumRows": 3,
+  "WildSymbols": ["W"],
+  "StickyWild": true
+}

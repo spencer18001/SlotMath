@@ -146,6 +146,7 @@ Useful flags:
 
 ```text
 -spins     number of paid base spins
+-free-spins initial free spins per simulation round; 0 starts from the base game
 -seed      base random seed; 0 means random
 -bet       total bet per spin; 0 activates all configured paylines
 ```

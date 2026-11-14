@@ -12,8 +12,9 @@ type Simulator struct {
 }
 
 type RunRequest struct {
-	Spins int
-	Bet   int64
+	Spins     int
+	Bet       int64
+	FreeSpins int
 }
 
 type Summary struct {
@@ -46,6 +47,9 @@ func (s *Simulator) Run(request RunRequest) (*Summary, error) {
 	if request.Spins <= 0 {
 		return nil, fmt.Errorf("spins must be greater than zero")
 	}
+	if request.FreeSpins < 0 {
+		return nil, fmt.Errorf("free spins cannot be negative")
+	}
 
 	engine := s.flow.Engine()
 	bet, err := engine.ResolveBet(request.Bet)
@@ -61,6 +65,10 @@ func (s *Simulator) Run(request RunRequest) (*Summary, error) {
 
 	for round := 0; round < request.Spins; round++ {
 		state := flow.State{Bet: bet.Total}
+		if request.FreeSpins > 0 {
+			state.Mode = spin.ModeFree
+			state.FreeSpinsRemaining = request.FreeSpins
+		}
 		for !state.Completed {
 			stepResult, err := s.flow.Next(state)
 			if err != nil {
