@@ -18,6 +18,7 @@ type State struct {
 	Bet                int64
 	Mode               spin.Mode
 	FreeSpinsRemaining int
+	StickyWilds        []spin.StickyWild
 	Completed          bool
 }
 
@@ -51,7 +52,9 @@ func (f *Flow) Next(state State) (StepResult, error) {
 		return StepResult{}, fmt.Errorf("unsupported game mode %q", mode)
 	}
 
-	spinResult, err := f.engine.Spin(spin.SpinRequest{Bet: state.Bet, Mode: mode})
+	spinResult, err := f.engine.Spin(spin.SpinRequest{
+		Bet: state.Bet, Mode: mode, StickyWilds: state.StickyWilds,
+	})
 	if err != nil {
 		return StepResult{}, err
 	}
@@ -67,9 +70,14 @@ func (f *Flow) Next(state State) (StepResult, error) {
 	if remaining > 0 {
 		nextMode = spin.ModeFree
 	}
+	var stickyWilds []spin.StickyWild
+	if mode == spin.ModeFree && remaining > 0 {
+		stickyWilds = spinResult.StickyWilds
+	}
 
 	return StepResult{State: State{
-		Bet: state.Bet, Mode: nextMode, FreeSpinsRemaining: remaining, Completed: completed,
+		Bet: state.Bet, Mode: nextMode, FreeSpinsRemaining: remaining,
+		StickyWilds: stickyWilds, Completed: completed,
 	}, Spin: spinResult}, nil
 }
 

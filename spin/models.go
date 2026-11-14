@@ -10,6 +10,11 @@ type Position struct {
 	Row  int
 }
 
+type StickyWild struct {
+	Position Position
+	Symbol   string
+}
+
 type Board [][]string // 盤面 ([reel][row] -> symbol)
 
 func (b Board) Clone() Board {

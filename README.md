@@ -68,6 +68,15 @@ A scatter rule may award free spins. `spin.Result.FreeSpins` is the number newly
 }
 ```
 
+Set `StickyWild` to `true` to keep Wild symbols fixed at the same board positions for the rest of the current free game. All symbols listed in `WildSymbols` become sticky. Sticky positions carry through retriggers and reset when the free game ends. Sticky Wild requires `reels_free.csv` and currently cannot be combined with `Cascading`.
+
+```json
+{
+  "WildSymbols": ["W"],
+  "StickyWild": true
+}
+```
+
 ## Basic usage
 
 ```go

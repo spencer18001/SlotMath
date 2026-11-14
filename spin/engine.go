@@ -17,6 +17,7 @@ type Engine struct {
 	lineEvaluator    *LineEvaluator
 	wayEvaluator     *WayEvaluator
 	scatterEvaluator *ScatterEvaluator
+	wilds            map[string]bool
 }
 
 type GameInfo struct {
@@ -27,13 +28,15 @@ type GameInfo struct {
 	WayPayBet    int64
 	DrawMode     string
 	Cascading    bool
+	StickyWild   bool
 	ReelCount    int
 	PaylineCount int
 }
 
 type SpinRequest struct {
-	Bet  int64
-	Mode Mode
+	Bet         int64
+	Mode        Mode
+	StickyWilds []StickyWild
 }
 
 type SpinResult struct {
@@ -44,6 +47,7 @@ type SpinResult struct {
 	WayWins      []WayWin      // 初始盤面的 Way 獎項
 	ScatterWins  []ScatterWin  // 初始盤面的 Scatter 獎項
 	CascadeSteps []CascadeStep // 每次 Tumble 後的盤面與計分結果
+	StickyWilds  []StickyWild  // 此次 Free Spin 結束後累積的 Sticky Wild
 	TotalWin     int64         // 初始盤面與所有 Cascade 的總得分
 	FreeSpins    int           // 初始盤面與所有 Cascade 觸發的 Free Spins 總數
 }
@@ -78,6 +82,10 @@ func newEngine(gameSetting GameSetting, seed int64) (*Engine, error) {
 	}
 
 	baseReels := gameSetting.reels[ModeBase]
+	wilds := make(map[string]bool, len(gameSetting.baseSetting.WildSymbols))
+	for _, symbol := range gameSetting.baseSetting.WildSymbols {
+		wilds[symbol] = true
+	}
 	scatterPayBet := int64(1)
 	if len(gameSetting.paytable.Way) > 0 {
 		scatterPayBet = gameSetting.baseSetting.WayPayBet
@@ -88,10 +96,11 @@ func newEngine(gameSetting GameSetting, seed int64) (*Engine, error) {
 			GameID: gameSetting.baseSetting.GameID, Path: gameSetting.path, Seed: seed,
 			BetPerLine: gameSetting.baseSetting.BetPerLine, WayPayBet: gameSetting.baseSetting.WayPayBet,
 			DrawMode: string(drawMode), Cascading: gameSetting.baseSetting.Cascading,
-			ReelCount: len(baseReels), PaylineCount: len(gameSetting.paylines),
+			StickyWild: gameSetting.baseSetting.StickyWild,
+			ReelCount:  len(baseReels), PaylineCount: len(gameSetting.paylines),
 		},
 		rng: rand.New(rand.NewSource(actualSeed)), generators: generators,
-		paylines: gameSetting.paylines, paytable: gameSetting.paytable,
+		paylines: gameSetting.paylines, paytable: gameSetting.paytable, wilds: wilds,
 		lineEvaluator:    newLineEvaluator(gameSetting.paylines, gameSetting.paytable, gameSetting.baseSetting.WildSymbols),
 		wayEvaluator:     newWayEvaluator(gameSetting.paytable, gameSetting.baseSetting.WildSymbols, gameSetting.baseSetting.WayPayBet),
 		scatterEvaluator: newScatterEvaluator(gameSetting.paytable, scatterPayBet),
@@ -140,10 +149,54 @@ func (e *Engine) Spin(request SpinRequest) (SpinResult, error) {
 	}
 
 	drawResult := generator.draw(e.rng)
-	if !e.info.Cascading {
-		return e.evaluateSingle(mode, drawResult, bet)
+	if mode == ModeFree && e.info.StickyWild {
+		if err := e.applyStickyWilds(drawResult.Board, request.StickyWilds); err != nil {
+			return SpinResult{}, err
+		}
 	}
-	return e.evaluateCascading(mode, generator, drawResult, bet)
+
+	var result SpinResult
+	if !e.info.Cascading {
+		result, err = e.evaluateSingle(mode, drawResult, bet)
+	} else {
+		result, err = e.evaluateCascading(mode, generator, drawResult, bet)
+	}
+	if err != nil {
+		return SpinResult{}, err
+	}
+	if mode == ModeFree && e.info.StickyWild {
+		result.StickyWilds = e.collectStickyWilds(result.Board)
+	}
+	return result, nil
+}
+
+func (e *Engine) applyStickyWilds(board Board, stickyWilds []StickyWild) error {
+	for _, sticky := range stickyWilds {
+		position := sticky.Position
+		if position.Reel < 0 || position.Reel >= len(board) || position.Row < 0 || position.Row >= len(board[position.Reel]) {
+			return fmt.Errorf("sticky wild position [%d][%d] is outside the board", position.Reel, position.Row)
+		}
+		if !e.wilds[sticky.Symbol] {
+			return fmt.Errorf("sticky wild symbol %q is not configured as WildSymbols", sticky.Symbol)
+		}
+		board[position.Reel][position.Row] = sticky.Symbol
+	}
+	return nil
+}
+
+func (e *Engine) collectStickyWilds(board Board) []StickyWild {
+	var stickyWilds []StickyWild
+	for reelIndex, reel := range board {
+		for rowIndex, symbol := range reel {
+			if e.wilds[symbol] {
+				stickyWilds = append(stickyWilds, StickyWild{
+					Position: Position{Reel: reelIndex, Row: rowIndex},
+					Symbol:   symbol,
+				})
+			}
+		}
+	}
+	return stickyWilds
 }
 
 func (e *Engine) generatorFor(mode Mode) (Mode, *Generator, error) {

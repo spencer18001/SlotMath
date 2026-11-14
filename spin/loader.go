@@ -36,6 +36,7 @@ type GameBaseSetting struct {
 	DrawMode    string
 	Cascading   bool
 	WildSymbols []string
+	StickyWild  bool // Free Game 中出現的 Wild 固定於原位置
 }
 
 type Paytable struct {
@@ -233,6 +234,17 @@ func validateGameSetting(gameSetting GameSetting) error {
 				return fmt.Errorf("free reels are required when scatter pays award FreeSpins")
 			}
 			break
+		}
+	}
+	if baseSetting.StickyWild {
+		if len(baseSetting.WildSymbols) == 0 {
+			return fmt.Errorf("StickyWild requires WildSymbols")
+		}
+		if _, ok := gameSetting.reels[ModeFree]; !ok {
+			return fmt.Errorf("StickyWild requires free reels")
+		}
+		if baseSetting.Cascading {
+			return fmt.Errorf("StickyWild does not support Cascading")
 		}
 	}
 
