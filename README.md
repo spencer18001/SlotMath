@@ -77,6 +77,25 @@ Set `StickyWild` to `true` to keep Wild symbols fixed at the same board position
 }
 ```
 
+Set `MegaSymbol` to draw a weighted coverage case after the reel stops are drawn. Covered rows on every reel except the first and last are replaced by one weighted symbol before evaluation. `Mode` defaults to `base`. The spin result reports the zero-based case index, selected symbol, and covered positions in `SpinResult.MegaSymbol`.
+
+```json
+{
+  "MegaSymbol": {
+    "Mode": "base",
+    "Cases": [
+      { "Weight": 70, "Rows": [] },
+      { "Weight": 5, "Rows": [0] },
+      { "Weight": 4, "Rows": [0, 1, 2] }
+    ],
+    "Symbols": [
+      { "Symbol": "W", "Weight": 1 },
+      { "Symbol": "K", "Weight": 1 }
+    ]
+  }
+}
+```
+
 ## Basic usage
 
 ```go

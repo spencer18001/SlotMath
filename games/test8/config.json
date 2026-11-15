@@ -1,0 +1,27 @@
+{
+  "GameID": "test8",
+  "Description": "MegaSymbol",
+  "BetPerLine": 1,
+  "NumReels": 5,
+  "NumRows": 3,
+  "WildSymbols": ["W"],
+  "MegaSymbol": {
+    "Mode": "base",
+    "Cases": [
+      { "Weight": 70, "Rows": [] },
+      { "Weight": 5, "Rows": [0] },
+      { "Weight": 5, "Rows": [2] },
+      { "Weight": 8, "Rows": [0, 1] },
+      { "Weight": 8, "Rows": [1, 2] },
+      { "Weight": 4, "Rows": [0, 1, 2] }
+    ],
+    "Symbols": [
+      { "Symbol": "W", "Weight": 1 },
+      { "Symbol": "K", "Weight": 1 },
+      { "Symbol": "Q", "Weight": 1 },
+      { "Symbol": "J", "Weight": 1 },
+      { "Symbol": "10", "Weight": 1 },
+      { "Symbol": "9", "Weight": 1 }
+    ]
+  }
+}

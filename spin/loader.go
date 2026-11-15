@@ -37,6 +37,23 @@ type GameBaseSetting struct {
 	Cascading   bool
 	WildSymbols []string
 	StickyWild  bool // Free Game 中出現的 Wild 固定於原位置
+	MegaSymbol  *MegaSymbolSetting
+}
+
+type MegaSymbolSetting struct {
+	Mode    Mode
+	Cases   []MegaSymbolCase
+	Symbols []MegaSymbolWeight
+}
+
+type MegaSymbolCase struct {
+	Weight int
+	Rows   []int
+}
+
+type MegaSymbolWeight struct {
+	Symbol string
+	Weight int
 }
 
 type Paytable struct {
@@ -245,6 +262,42 @@ func validateGameSetting(gameSetting GameSetting) error {
 		}
 		if baseSetting.Cascading {
 			return fmt.Errorf("StickyWild does not support Cascading")
+		}
+	}
+	if baseSetting.MegaSymbol != nil {
+		megaMode := baseSetting.MegaSymbol.Mode
+		if megaMode == "" {
+			megaMode = ModeBase
+		}
+		if megaMode != ModeBase && megaMode != ModeFree {
+			return fmt.Errorf("MegaSymbol Mode %q is unsupported", megaMode)
+		}
+		if _, ok := gameSetting.reels[megaMode]; !ok {
+			return fmt.Errorf("MegaSymbol requires %s reels", megaMode)
+		}
+		if len(baseSetting.MegaSymbol.Cases) == 0 {
+			return fmt.Errorf("MegaSymbol Cases are required")
+		}
+		for caseIndex, megaCase := range baseSetting.MegaSymbol.Cases {
+			if megaCase.Weight <= 0 {
+				return fmt.Errorf("MegaSymbol case %d Weight must be greater than zero", caseIndex)
+			}
+			for _, row := range megaCase.Rows {
+				if row < 0 || row >= baseSetting.NumRows {
+					return fmt.Errorf("MegaSymbol case %d row %d is outside 0..%d", caseIndex, row, baseSetting.NumRows-1)
+				}
+			}
+		}
+		if len(baseSetting.MegaSymbol.Symbols) == 0 {
+			return fmt.Errorf("MegaSymbol Symbols are required")
+		}
+		for symbolIndex, symbol := range baseSetting.MegaSymbol.Symbols {
+			if symbol.Symbol == "" {
+				return fmt.Errorf("MegaSymbol symbol %d Symbol is required", symbolIndex)
+			}
+			if symbol.Weight <= 0 {
+				return fmt.Errorf("MegaSymbol symbol %d Weight must be greater than zero", symbolIndex)
+			}
 		}
 	}
 

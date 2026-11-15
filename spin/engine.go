@@ -18,6 +18,7 @@ type Engine struct {
 	wayEvaluator     *WayEvaluator
 	scatterEvaluator *ScatterEvaluator
 	wilds            map[string]bool
+	megaSymbol       *megaSymbolFeature
 }
 
 type GameInfo struct {
@@ -40,16 +41,17 @@ type SpinRequest struct {
 }
 
 type SpinResult struct {
-	Mode         Mode          // 使用的 Reel Mode
-	Stops        []int         // 初始停輪位置
-	Board        Board         // 初始盤面
-	LineWins     []LineWin     // 初始盤面的 Line 獎項
-	WayWins      []WayWin      // 初始盤面的 Way 獎項
-	ScatterWins  []ScatterWin  // 初始盤面的 Scatter 獎項
-	CascadeSteps []CascadeStep // 每次 Tumble 後的盤面與計分結果
-	StickyWilds  []StickyWild  // 此次 Free Spin 結束後累積的 Sticky Wild
-	TotalWin     int64         // 初始盤面與所有 Cascade 的總得分
-	FreeSpins    int           // 初始盤面與所有 Cascade 觸發的 Free Spins 總數
+	Mode         Mode              // 使用的 Reel Mode
+	Stops        []int             // 初始停輪位置
+	Board        Board             // 初始盤面
+	LineWins     []LineWin         // 初始盤面的 Line 獎項
+	WayWins      []WayWin          // 初始盤面的 Way 獎項
+	ScatterWins  []ScatterWin      // 初始盤面的 Scatter 獎項
+	CascadeSteps []CascadeStep     // 每次 Tumble 後的盤面與計分結果
+	StickyWilds  []StickyWild      // 此次 Free Spin 結束後累積的 Sticky Wild
+	MegaSymbol   *MegaSymbolResult // 此次抽中的 Mega Symbol 與覆蓋位置
+	TotalWin     int64             // 初始盤面與所有 Cascade 的總得分
+	FreeSpins    int               // 初始盤面與所有 Cascade 觸發的 Free Spins 總數
 }
 
 type boardEvaluation struct {
@@ -104,6 +106,7 @@ func newEngine(gameSetting GameSetting, seed int64) (*Engine, error) {
 		lineEvaluator:    newLineEvaluator(gameSetting.paylines, gameSetting.paytable, gameSetting.baseSetting.WildSymbols),
 		wayEvaluator:     newWayEvaluator(gameSetting.paytable, gameSetting.baseSetting.WildSymbols, gameSetting.baseSetting.WayPayBet),
 		scatterEvaluator: newScatterEvaluator(gameSetting.paytable, scatterPayBet),
+		megaSymbol:       newMegaSymbolFeature(gameSetting.baseSetting.MegaSymbol),
 	}, nil
 }
 
@@ -149,6 +152,10 @@ func (e *Engine) Spin(request SpinRequest) (SpinResult, error) {
 	}
 
 	drawResult := generator.draw(e.rng)
+	var megaSymbol *MegaSymbolResult
+	if e.megaSymbol != nil && e.megaSymbol.mode == mode {
+		megaSymbol = e.megaSymbol.apply(e.rng, drawResult.Board)
+	}
 	if mode == ModeFree && e.info.StickyWild {
 		if err := e.applyStickyWilds(drawResult.Board, request.StickyWilds); err != nil {
 			return SpinResult{}, err
@@ -164,6 +171,7 @@ func (e *Engine) Spin(request SpinRequest) (SpinResult, error) {
 	if err != nil {
 		return SpinResult{}, err
 	}
+	result.MegaSymbol = megaSymbol
 	if mode == ModeFree && e.info.StickyWild {
 		result.StickyWilds = e.collectStickyWilds(result.Board)
 	}
