@@ -96,6 +96,15 @@ Set `MegaSymbol` to draw a weighted coverage case after the reel stops are drawn
 }
 ```
 
+Set `ExpandingWild` to `true` to expand a visible Wild over its entire reel before evaluation. Every symbol listed in `WildSymbols` can trigger the feature. `SpinResult.ExpandingWilds` reports the expanded reel and Wild symbol.
+
+```json
+{
+  "WildSymbols": ["W"],
+  "ExpandingWild": true
+}
+```
+
 ## Basic usage
 
 ```go

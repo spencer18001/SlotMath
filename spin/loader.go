@@ -27,17 +27,18 @@ type GameSetting struct {
 }
 
 type GameBaseSetting struct {
-	GameID      string
-	Description string
-	BetPerLine  int64 // 押一條線要幾分 (可以由當次總押注算出押幾條線)
-	WayPayBet   int64
-	NumReels    int // 盤面有幾軸
-	NumRows     int // 盤面每軸有幾列
-	DrawMode    string
-	Cascading   bool
-	WildSymbols []string
-	StickyWild  bool // Free Game 中出現的 Wild 固定於原位置
-	MegaSymbol  *MegaSymbolSetting
+	GameID        string
+	Description   string
+	BetPerLine    int64 // 押一條線要幾分 (可以由當次總押注算出押幾條線)
+	WayPayBet     int64
+	NumReels      int // 盤面有幾軸
+	NumRows       int // 盤面每軸有幾列
+	DrawMode      string
+	Cascading     bool
+	WildSymbols   []string
+	StickyWild    bool // Free Game 中出現的 Wild 固定於原位置
+	ExpandingWild bool // 盤面出現 Wild 時展開整軸
+	MegaSymbol    *MegaSymbolSetting
 }
 
 type MegaSymbolSetting struct {
@@ -263,6 +264,9 @@ func validateGameSetting(gameSetting GameSetting) error {
 		if baseSetting.Cascading {
 			return fmt.Errorf("StickyWild does not support Cascading")
 		}
+	}
+	if baseSetting.ExpandingWild && len(baseSetting.WildSymbols) == 0 {
+		return fmt.Errorf("ExpandingWild requires WildSymbols")
 	}
 	if baseSetting.MegaSymbol != nil {
 		megaMode := baseSetting.MegaSymbol.Mode
